@@ -1,56 +1,83 @@
 {
-  "_version": "2026-05-13",
+  "_version": "2026-05-13-v2",
   "_fuente": "cuestionario_lorena.md — respondido por Lorena Ruiz",
+  "_nota": "Roles separados explícitamente: LinkedIn/Teleperformance = LATAM. Amazon = APAC. No mezclar mercados.",
 
   "roles": [
     {
-      "cargo": "Account Executive — LinkedIn Marketing Solutions",
-      "empresa": "LinkedIn (via Teleperformance)",
+      "cargo": "Paid Media Specialist / Account Manager — LinkedIn Ads",
+      "empresa": "Teleperformance (contract for LinkedIn Marketing Solutions)",
       "fecha": "February 2026 – Present",
+      "ubicacion": "Bogotá, Hybrid",
+      "mercado": "Latin America ONLY — APAC does NOT apply to this role",
       "cuentas_gestionadas": 300,
       "presupuesto_por_cuenta_usd_mes": 800,
       "presupuesto_portafolio_usd_mes": 240000,
-      "tipo_clientes": "Grandes marcas globales APAC en Amazon: electrónica de consumo, hogar, robótica, cuidado personal. Presupuestos DSP de 6 cifras mensuales.",
-      "kpis_principales": ["ROAS", "tROAS", "NTB Sales", "Total Sales", "DPVR", "Brand Search Rate", "CTR", "CPC", "CPL", "CPA", "Average Frequency"],
-      "coordinacion_regional": "Reuniones semanales en inglés con Global Account Executives de Amazon APAC (Singapur, Sídney, Tokio). Reportes mensuales al equipo APAC.",
+      "tipo_clientes": "B2B enterprise companies across Latin America. Example: ThinkOnward (open innovation platform for the energy sector — geocientíficos, Data Science professionals).",
+      "tipo_campanas": ["Sponsored Content", "Lead Gen Forms", "Engagement", "Website Visits", "Website Conversions"],
+      "kpis_principales": ["CPL", "CPA", "CPC", "CTR", "Average Frequency", "Website Conversions", "Lead Gen Form fills"],
+      "coordinacion": "Delivers weekly performance reviews and optimization recommendations in English to Global Account Executives based in Singapore, Sydney, and Tokyo. NOTE: these AEs are the supervisors she reports TO — the market she manages is Latin America, not APAC.",
       "logros": [
-        "Modelones alcanzó posición #1 en categoría Nail Polish en Amazon durante Q3 y Q4 2025, recuperando participación de categoría tras estrategia de Market Research + DSP.",
-        "TCL Electronics reportó crecimiento del 15.4% en ingresos anuales 2025 (1,145.8B HKD) apoyado en campañas DSP y contextual display vinculadas a la estrategia NFL 2025, en un contexto de decrecimiento de categoría Home Market."
+        "ThinkOnward campaign (launched March 10, 2026): USD 200 investment → 198,752 impressions, 84,129 unique specialized professionals reached (Earth Sciences + Data Science audience), 208 clicks to site, CPC USD 0.96, CPM USD 1.01, CTR 0.105%. Achieved high-efficiency B2B reach in a highly specialized niche.",
+        "Manages and optimizes LinkedIn Ads campaigns for 300+ B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives."
+      ]
+    },
+    {
+      "cargo": "Campaign Planner Contractor",
+      "empresa": "Amazon, Colombia",
+      "fecha": "May 2025 – Present",
+      "ubicacion": "Bogotá",
+      "mercado": "APAC markets ONLY — Latin America does NOT apply to this role",
+      "tipo_trabajo": "Amazon DSP programmatic campaign planning — no direct Seller/Vendor Central management. Supports Global Account Executives with campaign strategy, optimization, and reporting.",
+      "herramientas": ["Amazon DSP", "Amazon Marketing Cloud (AMC)", "Tableau", "Power BI"],
+      "estructura_equipo": "Supports 4 Global Account Executives (GAEs) in APAC (Singapore, Sydney, Tokyo), each managing 5 premium brand accounts with annual sales targets of USD 3M per account.",
+      "marcas_gestionadas": ["Midea", "Bedsure", "Narwal", "Jackery", "Reolink", "Momcozy", "Govee", "Modelones", "TCL"],
+      "asins_por_campana": "30-60 ASINs (bulk: up to 60 for Midea/Bedsure; focused campaigns: 20-30 for Narwal/Jackery)",
+      "objetivos_campanas": ["Conquista NTB (new-to-brand) via in-market audiences and video in-stream", "Remarketing y fidelización con anuncios dinámicos de productos vistos", "Lower-funnel video: push conversion when CPC in search is high using lookalike audiences"],
+      "coordinacion": "Weekly meetings in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo). Monthly reports on tROAS, NTB Sales, and campaign optimizations for APAC premium accounts.",
+      "kpis_principales": ["ROAS", "tROAS", "NTB Sales", "Total Sales", "DPVR", "Brand Search Rate", "CTR", "CPC", "ACOS"],
+      "logros": [
+        "Narwal (Nov 20 – Dec 21, 2025 — APAC): tROAS improved from 1.28x to 3.28x; USD 100,000 attributed sales in 30 days via DSP remarketing, video creative refresh, and impression frequency capping.",
+        "Modelones (Q3 2025 — APAC): Achieved #1 position in Nail Polish category on Amazon for Q3 and Q4 2025, recovering category share through Amazon ecosystem Market Research (keywords, competitive landscape, category dynamics, trend analysis) + DSP strategy.",
+        "TCL Electronics (2025 — APAC): Supported NFL 2025 brand strategy with aggressive DSP display and contextual ad packages across NFL season; TCL reported +15.4% annual revenue growth (1,145.8B HKD) in a declining Home Market category.",
+        "Designed funnel-based reporting format (awareness → consideration → conversion) adopted as internal standard by all new Account Executives in the CPC Team Colombia. Reduced APAC team report review time by 30%.",
+        "Transformed results presentations into commercial narratives crossing competitive data, share of voice, and market behavior — facilitating faster budget optimization decisions with APAC Global Account Executives."
       ]
     },
     {
       "cargo": "National Marketing Manager",
       "empresa": "Alcalisa S.A.",
       "fecha": "2013 – 2018",
+      "ubicacion": "Quito, Ecuador",
       "logros": [
-        "Crecí la facturación de USD 1.5M a USD 3.0M en 4 años (+100%), liderando estrategia de marca, trade marketing y canales digitales.",
-        "Aumenté brand awareness del 18% al 34% (+16 p.p.) tras migrar el presupuesto de medios tradicionales a digital ante la Ley de Comunicación de Ecuador (prohibición publicidad de licores en TV/radio).",
-        "Alcancé 45% de share of voice en redes sociales en el segmento de licores nacionales, partiendo de 0% en 2013.",
-        "Elevé el market share del 12% al 18% (+6 p.p.) en el segmento de licores nacionales de Ecuador, ascendiendo a segunda empresa más grande del rubro.",
-        "Campaña Navidad 2015 con Supermaxi: inversión de USD 800 en Facebook Ads generó +18% en ventas del SKU Bellows whisky en diciembre vs. año anterior.",
-        "Campaña 360° Carnaval 2016: +22% en ventas durante febrero-marzo vs. mismo periodo del año anterior. Inversión: USD 26,000 en eventos + USD 1,200 en Facebook Ads + activaciones en 4 provincias.",
-        "Lanzamiento Bellows 8 años (2013): alcanzó el 12% de ventas totales en primer año; creció un 25% en 2014.",
-        "Lanzamiento Secreto Inti (licor premium): posicionado en 20+ puntos HORECA premium (Hotel Quito, Casa Gangotena, Plaza Grande) en 2015; codificado en Supermaxi en 2016.",
-        "Codificación del 100% del portafolio (6-8 SKUs) en Supermaxi, Coral, Tía y Santa María al cierre de 2018.",
-        "Lideré 12-15 activaciones en punto de venta por año, incluyendo degustaciones, displays, activaciones en discotecas y muestreo en ferias nacionales.",
-        "Implementé digitalización del reporting de ventas por canal con Power BI, integrando datos de cadenas y distribuidores.",
-        "Diseñé sistema de bonificaciones escalonadas (1%-25%) a distribuidores, digitalizado para seguimiento por temporada y volumen.",
-        "Gestioné presupuesto de marketing anual de USD 350,000–450,000 (12%-15% de la facturación).",
-        "Coordiné red de capacitación de 150+ personas al año: distribuidores, bartenders y personal HORECA en Ecuador."
+        "Grew company revenue from USD 1.5M to USD 3.0M in 4 years (+100%), leading brand strategy, trade marketing, and digital channel migration.",
+        "Increased brand awareness from 18% to 34% (+16 p.p.) after migrating marketing budget from traditional media to digital following Ecuador's Ley de Comunicación (prohibition of alcohol advertising on TV/radio).",
+        "Achieved 45% share of voice on social media in the national spirits segment, starting from 0% in 2013.",
+        "Grew market share from 12% to 18% (+6 p.p.) in Ecuador's national spirits segment, rising to 2nd largest company in the category.",
+        "Christmas 2015 (Supermaxi): USD 800 Facebook Ads investment generated +18% sales uplift on Bellows whisky SKU in December vs. prior year.",
+        "Carnaval 360° campaign 2016: +22% sales during February–March vs. same period prior year. Investment: USD 26,000 in events + USD 1,200 Facebook Ads + activations in 4 provinces (Ambato, Guayaquil, Latacunga, Quito).",
+        "Bellows 8 años launch (2013): reached 12% of total company sales in first year; grew 25% in 2014, becoming a star product.",
+        "Secreto Inti launch (premium liqueur): positioned in 20+ premium HORECA venues (Hotel Quito, Casa Gangotena, Plaza Grande) in 2015; codified into Supermaxi portfolio in 2016 — first time the chain accepted an on-trade validated niche product.",
+        "Achieved 100% portfolio codification (6-8 SKUs) across Supermaxi, Coral, Tía, and Santa María by end of 2018.",
+        "Led 12-15 point-of-sale activations per year: degustaciones, displays, discoteca activations, and national fair muestreo.",
+        "Implemented Power BI-based sales reporting integrating retail chain and distributor data.",
+        "Managed annual marketing budget of USD 350,000–450,000 (12–15% of revenue).",
+        "Trained 150+ people per year: regional distributors, bartenders, and HORECA staff at 5-star hotels."
       ]
     },
     {
       "cargo": "Marketing Manager",
       "empresa": "GRC S.A.",
       "fecha": "2012 – 2013",
+      "ubicacion": "Madrid, España",
       "logros": [
-        "Superé el objetivo de exportación en un 50%: de 4 contenedores proyectados al año a 6 cerrados (~USD 108,000 en ingresos anuales).",
-        "Aseguré acuerdos de distribución exclusiva en Shanghai y Moscú para dos de las tres marcas de vino lanzadas.",
-        "Aumenté las exportaciones a Asia un 7.5% en un año.",
-        "Reduje CPC en Google Ads de USD 1.10 a USD 0.75 (-32%) en 4 meses mediante limpieza de palabras clave negativas y segmentación por husos horarios (China y Rusia).",
-        "Aumenté tasa de conversión (lead → contacto comercial) un 25% optimizando landing pages y extensiones de sitio.",
-        "Logré ROAS de 4:1 en Google Ads B2B (objetivo: 3:1), con presupuesto de USD 1,500/mes.",
-        "Lideré la creación y posicionamiento de 3 marcas de vino para exportación a China y Rusia (arquitectura, naming, packaging, storytelling)."
+        "Exceeded export target by 50%: from 4 projected containers/year to 6 closed (~USD 108,000 in annual revenue).",
+        "Secured exclusive distribution agreements in Shanghai and Moscow for two of three wine brands launched.",
+        "Grew exports to Asia by 7.5% in one year.",
+        "Reduced Google Ads CPC from USD 1.10 to USD 0.75 (-32%) in 4 months via negative keyword cleanup and time-zone-based scheduling (China and Russia).",
+        "Increased lead-to-commercial-contact conversion rate by 25% through landing page optimization and site extensions.",
+        "Achieved ROAS 4:1 on B2B Google Ads (target: 3:1) with USD 1,500/month budget.",
+        "Led creation and positioning of 3 wine brands for China and Russia export (brand architecture, naming, packaging, storytelling, B2B distributor strategy)."
       ]
     }
   ],
@@ -64,7 +91,7 @@
       "roas_logrado": "4:1",
       "tipos_campana": ["Search (inglés, ruso, chino simplificado)", "Display — remarketing básico"],
       "kpi_principal": "Costo por Lead (CPL) cualificado B2B",
-      "logro_destacado": "CPC de USD 1.10 → USD 0.75 (-32%) en 4 meses; conversión lead→contacto +25%; de 4 a 6 contenedores vendidos (+50% sobre meta, ~USD 108K ingresos)"
+      "logro_destacado": "CPC USD 1.10 → USD 0.75 (-32%) en 4 meses; conversión lead→contacto +25%; de 4 a 6 contenedores vendidos (+50% sobre meta, ~USD 108K ingresos)"
     },
 
     "meta_ads": {
@@ -76,11 +103,13 @@
     },
 
     "amazon_dsp": {
+      "mercado": "APAC",
       "tipo_cuenta": "Amazon DSP (programmatic) — no Seller/Vendor Central directo",
       "herramientas": ["Amazon DSP", "Amazon Marketing Cloud (AMC)"],
       "asins_por_campana": "30-60 ASINs (bulk: hasta 60 para Midea/Bedsure; campañas foco: 20-30 para Narwal/Jackery)",
       "troas_ejemplo_narwal": {
         "marca": "Narwal",
+        "mercado": "APAC",
         "periodo": "20 nov – 21 dic 2025",
         "troas_inicial": "1.28x",
         "troas_final": "3.28x",
@@ -89,16 +118,17 @@
       },
       "marcas_gestionadas": ["Midea", "Bedsure", "Narwal", "Jackery", "Reolink", "Momcozy", "Govee", "Modelones", "TCL"],
       "objetivos_campanas": ["Conquista NTB (new-to-brand)", "Remarketing y fidelización", "Lower-funnel con video in-stream"],
-      "logro_destacado": "tROAS de Narwal: 1.28x → 3.28x; USD 100K ventas atribuidas en 30 días. Modelones: #1 en Nail Polish Q3-Q4 2025. TCL: +15.4% ingresos anuales 2025."
+      "logro_destacado": "tROAS Narwal (APAC): 1.28x → 3.28x; USD 100K ventas atribuidas en 30 días. Modelones: #1 en Nail Polish Q3-Q4 2025 (APAC). TCL: +15.4% ingresos anuales 2025 (APAC)."
     },
 
     "linkedin_ads": {
+      "mercado": "Latin America ONLY",
       "rol_actual": true,
       "cuentas": 300,
       "presupuesto_portafolio_usd_mes": 240000,
       "tipo_campanas": ["Sponsored Content", "Lead Gen Forms", "Engagement", "Website Visits", "Website Conversions"],
       "caso_thinkonward": {
-        "cliente": "ThinkOnward (plataforma innovación abierta, sector energético)",
+        "cliente": "ThinkOnward (plataforma innovación abierta, sector energético — Latin America)",
         "inversion_usd": 200,
         "impresiones": 198752,
         "alcance_unico": 84129,
@@ -108,7 +138,7 @@
         "ctr_pct": 0.105,
         "segmentacion": "intereses Ciencias de la Tierra y Data Science — audiencia B2B técnica especializada"
       },
-      "logro_destacado": "CPC de USD 0.96 en audiencia B2B técnica altamente especializada (geocientíficos, Data Science). 84,129 profesionales únicos alcanzados con USD 200 de inversión."
+      "logro_destacado": "CPC de USD 0.96 en audiencia B2B técnica altamente especializada (geocientíficos, Data Science). 84,129 profesionales únicos alcanzados con USD 200 de inversión en Latin America."
     },
 
     "otras_plataformas": [],
@@ -125,7 +155,7 @@
     "datos_awareness": "Alcalisa: awareness 18% → 34% (+16 p.p.); share of voice digital 0% → 45% en segmento licores nacionales Ecuador (2013-2017)",
     "lanzamientos_liderados": "8 lanzamientos de productos + 6 campañas 360°",
     "presentaciones_c_suite": "Mensual al CEO (Alcalisa); trimestral al Directorio; mensual al Director Comercial (GRC); presentaciones en inglés a compradores chinos y rusos (GRC)",
-    "transformacion_digital": "En Alcalisa: migré inversión de medios tradicionales (prohibidos por Ley de Comunicación Ecuador) a Facebook Ads + captación digital de leads para distribuidores + Power BI para reporting de ventas + bonificaciones digitalizadas. En Amazon: uso de AMC para atribución avanzada y medición multicanal."
+    "transformacion_digital": "En Alcalisa: migré inversión de medios tradicionales (prohibidos por Ley de Comunicación Ecuador) a Facebook Ads + captación digital de leads para distribuidores + Power BI para reporting de ventas + bonificaciones digitalizadas. En Amazon: uso de AMC para atribución avanzada y medición multicanal (APAC)."
   },
 
   "trade_retail": {
@@ -155,9 +185,10 @@
     "nivel_equivalente": "C2 Proficient",
     "fecha_certificacion": "Octubre 2025",
     "uso_profesional": [
-      "Reuniones semanales en inglés con Global Account Executives de Amazon APAC (Singapur, Sídney, Tokio)",
-      "Reportes mensuales al equipo APAC sobre performance de cuentas premium (tROAS, NTB Sales, optimizaciones)",
-      "Consultoría en inglés a anunciantes internacionales en LinkedIn (ej. ThinkOnward, sector energético)",
+      "Weekly performance reviews and optimization recommendations in English to Global Account Executives (Singapore, Sydney, Tokyo) — LinkedIn/Teleperformance role, Latin America market",
+      "Reuniones semanales en inglés con Global Account Executives de Amazon APAC (Singapur, Sídney, Tokio) — Amazon role, APAC market",
+      "Reportes mensuales al equipo APAC sobre performance de cuentas premium (tROAS, NTB Sales, optimizaciones) — Amazon role",
+      "Consultoría en inglés a anunciantes internacionales en LinkedIn (ej. ThinkOnward, sector energético) — Latin America",
       "Presentaciones internacionales en inglés a compradores chinos y rusos en GRC S.A. (negociación de distribución exclusiva)",
       "Visitas a proveedores escoceses de malta en Alcalisa — coordinación técnica y logística de importación en inglés"
     ]
@@ -165,15 +196,15 @@
 
   "logros_adicionales": [
     {
-      "titulo": "Estandarización de reportes por funnel (Amazon)",
+      "titulo": "Estandarización de reportes por funnel (Amazon — APAC)",
       "descripcion": "Diseñé formato de reporte por nivel de funnel (awareness→consideración→conversión) adoptado como estándar interno por todos los Account Executives nuevos del CPC Team Colombia. Redujo tiempo de revisión de reportes un 30% y mejoró la calidad de decisiones de optimización ante el equipo APAC."
     },
     {
-      "titulo": "Narrativas comerciales en presentaciones (Amazon)",
-      "descripcion": "Transformé presentaciones de resultados y pitches reemplazando tablas densas por historias de impacto cruzando datos de competencia, share of voice, ventas y comportamiento de mercado. Redujo tiempo de revisión en 30% y facilitó decisiones de presupuesto con Global Account Executives."
+      "titulo": "Narrativas comerciales en presentaciones (Amazon — APAC)",
+      "descripcion": "Transformé presentaciones de resultados y pitches reemplazando tablas densas por historias de impacto cruzando datos de competencia, share of voice, ventas y comportamiento de mercado. Redujo tiempo de revisión en 30% y facilitó decisiones de presupuesto con Global Account Executives APAC."
     },
     {
-      "titulo": "Codificación total del portafolio en grandes cadenas Ecuador",
+      "titulo": "Codificación total del portafolio en grandes cadenas Ecuador (Alcalisa S.A.)",
       "descripcion": "Lideré la codificación del 100% del portafolio (6-8 SKUs) en Supermaxi, Coral, Tía y Santa María en 5 años (2013-2018), incluyendo negociación de nuevos ingresos (Secreto Inti, vodka y ron Bellows). Contribución directa al crecimiento de USD 1.5M a USD 3.0M de facturación y aumento de market share del 12% al 18%."
     }
   ]

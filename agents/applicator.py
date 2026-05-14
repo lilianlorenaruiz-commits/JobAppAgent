@@ -379,6 +379,13 @@ def _apply_web(job: dict, pdf_path: str) -> dict:
     print(f"  URL: {url}")
     print(f"  CV para subir: {pdf_path}")
 
+    # Notificación Telegram ANTES de abrir Playwright — asyncio.run() no puede
+    # ejecutarse dentro del event loop interno de Playwright sync API.
+    try:
+        send_cv_ready_browser([{**job}], timeout_min=timeout_min)
+    except Exception as e:
+        print(f"  [Applicator-B] Telegram no enviado: {e}")
+
     with sync_playwright() as p:
         os.makedirs(config.PLAYWRIGHT_USER_DATA_DIR, exist_ok=True)
         ctx = p.chromium.launch_persistent_context(
@@ -393,12 +400,6 @@ def _apply_web(job: dict, pdf_path: str) -> dict:
 
         # Intentar click automático en Apply
         clicked = _click_apply_button(page)
-
-        # Notificación Telegram HITL
-        try:
-            send_cv_ready_browser([{**job}], timeout_min=timeout_min)
-        except Exception as e:
-            print(f"  [Applicator-B] Telegram no enviado: {e}")
 
         if clicked:
             msg = (f"Botón Apply clickeado. Completa el formulario "

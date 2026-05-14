@@ -84,6 +84,16 @@ _PROFILE_BY_RAMA = {
 }
 
 
+def _normalize_fecha(fecha: str) -> str:
+    """Normaliza variantes de 'en curso' a 'Present' para consistencia."""
+    return re.sub(
+        r"\b(current\s*working|current|actual|presente|en\s+curso|a\s+la\s+fecha)\b",
+        "Present",
+        fecha,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
 def _cv_to_plain_text(cv: dict, rama: str = "A") -> str:
     yoe = _years_of_experience(cv)
     profile_template = _PROFILE_BY_RAMA.get(rama.upper(), _PROFILE_BY_RAMA["A"])
@@ -121,7 +131,8 @@ def _cv_to_plain_text(cv: dict, rama: str = "A") -> str:
         lines.append(exp["cargo"])
         if exp.get("empresa"):
             lines.append(exp["empresa"])
-        lines.append(exp.get("fecha", ""))
+        fecha = _normalize_fecha(exp.get("fecha", ""))
+        lines.append(fecha)
         if exp.get("descripcion"):
             lines.append(exp["descripcion"])
 
@@ -174,6 +185,8 @@ RULES:
     - LinkedIn/Teleperformance role: Latin America ONLY — do NOT write "APAC" for this role
     - Amazon Campaign Planner role: APAC markets ONLY — do NOT write "Latin America" for this role
     The LinkedIn AEs based in Singapore/Sydney/Tokyo are who she reports TO, not the market she manages
+11. NEVER modify employment dates — copy them exactly as provided. If a role shows "Present" keep "Present"; never infer an end date from another role's start date. Do NOT translate month names to Spanish.
+12. Keep work experience roles in the EXACT order provided (most recent first). Do NOT reorder roles based on relevance — only reorder bullet points within each role.
 
 OUTPUT FORMAT — use these exact delimiters, nothing else:
 <CV>

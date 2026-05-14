@@ -149,6 +149,25 @@ def _normalize(item: dict, rama: str) -> dict:
     }
 
 
+# ── Filtro de seniority ────────────────────────────────────────────────────────
+
+import re as _re
+
+_JUNIOR_PATTERN = _re.compile(
+    r"\b("
+    r"jr\.?|junior|entry[\s\-]?level|trainee"
+    r"|practicante|pasante|aprendiz"
+    r"|intern(?:ship)?"
+    r"|auxiliar\s+de\s+marketing|asistente\s+de\s+marketing"
+    r")\b",
+    _re.IGNORECASE,
+)
+
+
+def _is_junior(job: dict) -> bool:
+    return bool(_JUNIOR_PATTERN.search(job.get("cargo", "")))
+
+
 # ── Base de datos ──────────────────────────────────────────────────────────────
 
 def _filter_new(jobs: list[dict]) -> list[dict]:
@@ -311,6 +330,14 @@ def search_jobs(rama: str, dry_run: bool = False, limit: int | None = None) -> l
         print(f"[Scraper] {len(raw_items)} resultados de Apify")
         raw_jobs = [_normalize(item, rama) for item in raw_items]
         raw_jobs = [j for j in raw_jobs if j["id_cargo_externo"]]
+
+    # Filtro seniority — descartar cargos Jr / entry-level antes de procesar
+    junior_dropped = [j for j in raw_jobs if _is_junior(j)]
+    raw_jobs = [j for j in raw_jobs if not _is_junior(j)]
+    if junior_dropped:
+        titles = ", ".join(j["cargo"] for j in junior_dropped[:5])
+        extra = f" (y {len(junior_dropped)-5} más)" if len(junior_dropped) > 5 else ""
+        print(f"[Scraper] {len(junior_dropped)} cargos junior descartados: {titles}{extra}")
 
     new_jobs = _filter_new(raw_jobs)
     if limit:

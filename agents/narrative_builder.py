@@ -60,6 +60,10 @@ RULES:
 6. Maximum 2 lines per bullet (keep it scannable for ATS parsers)
 7. Write in the same bilingual Spanish/English tone as a senior Latin American professional
 8. NEVER attribute total company revenue or total brand sales as the candidate's personal paid media ROI — only attribute metrics directly tied to campaigns the candidate managed
+9. MARKET ATTRIBUTION — respect strict geographic scope per role:
+   - LinkedIn/Teleperformance role (Feb 2026–Present): Latin America ONLY — NEVER write "APAC" for this role
+   - Amazon Campaign Planner role: APAC markets ONLY — NEVER write "Latin America" for this role
+   The LinkedIn AEs in Singapore/Sydney/Tokyo are supervisors she reports to, NOT the market she manages
 
 OUTPUT: Return ONLY the bullet points, one per line, no headers, no explanations.\
 """
@@ -86,7 +90,8 @@ _RAMA_CONTEXT = {
         "Meta Ads, LinkedIn Ads, DSP, programmatic, ROAS, ACOS, tROAS, NTB sales, "
         "campaign optimization, budget management, data analysis\n"
         "FOCUS: platform-specific metrics, budget scale, before/after ROAS/ACOS improvements, "
-        "cross-platform expertise, APAC coordination"
+        "cross-platform expertise. "
+        "NOTE: APAC market belongs to Amazon role only. LinkedIn role = Latin America market only."
     ),
 }
 

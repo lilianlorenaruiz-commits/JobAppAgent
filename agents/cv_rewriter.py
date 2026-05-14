@@ -100,16 +100,19 @@ def _cv_to_plain_text(cv: dict, rama: str = "A") -> str:
     ]
 
     # Most recent role (not yet in PDF source — added Feb 2026)
+    # MARKET BOUNDARY: this role covers Latin America ONLY.
+    # APAC market coverage belongs exclusively to the Amazon Campaign Planner role.
     lines += [
         "",
         "Paid Media Specialist / Account Manager — LinkedIn Ads (via Teleperformance for LinkedIn Marketing Solutions)",
-        "Teleperformance (contract for LinkedIn)",
+        "Teleperformance (contract for LinkedIn Marketing Solutions)",
         "February 2026 – Present  |  Bogotá, Hybrid",
         (
             "Manage and optimize LinkedIn Ads campaigns for 300+ B2B enterprise accounts across "
-            "Latin America and APAC, including Sponsored Content, Lead Gen Forms, and Website "
-            "Conversions objectives. Report performance metrics and provide optimization "
-            "recommendations to Global Account Executives. Monthly portfolio spend: USD 240K."
+            "Latin America, executing Sponsored Content, Lead Gen Forms, and Website Conversion "
+            "objectives. Monthly managed portfolio: USD 240,000. Conduct weekly performance reviews "
+            "and deliver optimization recommendations in English to Global Account Executives "
+            "based in Singapore, Sydney, and Tokyo. Market scope: Latin America only."
         ),
     ]
 
@@ -167,6 +170,10 @@ RULES:
 7. Write in the same language style as the original CV (bilingual Spanish/English mix)
 8. NEVER attribute total company revenue or total brand sales as the candidate's personal paid media result — only attribute metrics directly tied to campaigns she managed (e.g. attributed sales from a specific DSP flight, not a company's annual revenue line)
 9. Use ONE consistent English proficiency level: "C2 Proficient (EF SET certified)" — do NOT write C1, C1/C2, or any variation
+10. MARKET ATTRIBUTION — each role has a fixed geographic scope; never cross-assign:
+    - LinkedIn/Teleperformance role: Latin America ONLY — do NOT write "APAC" for this role
+    - Amazon Campaign Planner role: APAC markets ONLY — do NOT write "Latin America" for this role
+    The LinkedIn AEs based in Singapore/Sydney/Tokyo are who she reports TO, not the market she manages
 
 OUTPUT FORMAT — use these exact delimiters, nothing else:
 <CV>

@@ -22,15 +22,17 @@ import config
 from agents.applicator import apply
 
 # ── Job de prueba — LinkedIn Easy Apply (Canal A) ──────────────────────────────
-# Reemplazar la URL con una oferta real de LinkedIn que tenga Easy Apply
+# NOTA: Si el cargo ya tiene "Solicitud enviada", el agente lo detecta y retorna
+# enviado=True directamente. Para probar el flujo completo usa una oferta sin aplicar.
+# Reemplaza la URL con una oferta real de LinkedIn que tenga Easy Apply:
 TEST_JOB = {
-    "cargo":     "Por identificar al abrir LinkedIn",
-    "empresa":   "Por identificar al abrir LinkedIn",
-    "url":       "https://www.linkedin.com/jobs/view/4407519233",
-    "modalidad": "Por confirmar",
-    "ubicacion": "Por confirmar",
+    "cargo":     "Planner",
+    "empresa":   "Havas Colombia",
+    "url":       "https://www.linkedin.com/jobs/view/4412124310/",
+    "modalidad": "Híbrido",
+    "ubicacion": "Bogotá D.C.",
     "rama":      "A",
-    "score":     91,
+    "score":     88,
 }
 
 # ── CV disponible ──────────────────────────────────────────────────────────────

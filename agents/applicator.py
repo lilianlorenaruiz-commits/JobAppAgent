@@ -13,6 +13,7 @@ Input:  job (dict), pdf_path (str), dry_run (bool)
 Output: {"enviado": bool, "canal": str, "url": str, "mensaje": str}
 """
 import os
+import re
 import sys
 import time
 import random
@@ -239,7 +240,12 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
         try:
             # ── 1. Navegar al cargo ──────────────────────────────────────────
             page.goto(url, timeout=30_000, wait_until="domcontentloaded")
-            _human_pause()
+            # Esperar a que el JS de LinkedIn termine de renderizar el panel del cargo
+            try:
+                page.wait_for_load_state("networkidle", timeout=10_000)
+            except Exception:
+                pass  # timeout en networkidle no es fatal
+            _human_pause(1.0, 2.0)
 
             # ── 2. Verificar que la página cargó (no es login wall) ─────────
             if "linkedin.com/login" in page.url or "authwall" in page.url:
@@ -253,48 +259,164 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                     "mensaje": "Sin sesión LinkedIn — inicia sesión en el navegador del perfil",
                 }
 
-            # ── 3. Easy Apply button ─────────────────────────────────────────
-            btn_selectors = [
-                "button.jobs-apply-button",
-                "button[data-job-id]",
-                ".jobs-s-apply button",
-                "button:has-text('Easy Apply')",
-            ]
-            easy_apply_btn = None
-            for sel in btn_selectors:
+            # ── 3. Verificar si ya fue aplicado ─────────────────────────────
+            _already_applied = False
+            for _at in ["Solicitud enviada", "Application submitted", "Ya aplicaste"]:
                 try:
-                    loc = page.locator(sel).first
-                    if loc.is_visible(timeout=3_000):
-                        easy_apply_btn = loc
+                    if page.locator(f"text={_at}").first.is_visible(timeout=1_500):
+                        _already_applied = True
                         break
                 except Exception:
                     continue
+            if _already_applied:
+                print("  [Applicator-A] Cargo ya aplicado anteriormente — saltando.")
+                ctx.close()
+                return {
+                    "enviado": True,
+                    "canal": "A",
+                    "url": url,
+                    "mensaje": "Solicitud ya enviada anteriormente en LinkedIn",
+                }
+
+            # ── 4. Easy Apply button ─────────────────────────────────────────
+            # LinkedIn renderiza el botón "Solicitud sencilla / Easy Apply" en el
+            # panel de detalle del cargo.  El panel de "trabajos similares" también
+            # contiene badges con ese texto, por lo que selectors demasiado amplios
+            # (text=) encuentran el badge, navegan al trabajo equivocado y no abren
+            # el modal.  Estrategia en capas, de más a menos específico:
+            easy_apply_btn = None
+
+            # Intento 1: get_by_role("button") scoped al top-card del cargo
+            # El panel de detalle de LinkedIn usa .jobs-unified-top-card o
+            # .job-view-layout; los badges de la lista son <a> o <span>, no <button>
+            _SCOPE_SELECTORS = [
+                ".jobs-unified-top-card",
+                ".jobs-details__main-content",
+                ".job-view-layout",
+            ]
+            _NAME_PATTERNS = [
+                re.compile(r"solicitud sencilla", re.IGNORECASE),
+                re.compile(r"easy apply", re.IGNORECASE),
+                re.compile(r"postulaci", re.IGNORECASE),   # "Postulación sencilla"
+            ]
+            for _scope_sel in _SCOPE_SELECTORS:
+                if easy_apply_btn:
+                    break
+                try:
+                    scope = page.locator(_scope_sel).first
+                    if not scope.is_visible(timeout=3_000):
+                        continue
+                    for _pat in _NAME_PATTERNS:
+                        try:
+                            loc = scope.get_by_role("button", name=_pat).first
+                            if loc.is_visible(timeout=5_000):
+                                easy_apply_btn = loc
+                                print(f"  [Applicator-A] Botón Easy Apply en {_scope_sel!r}.")
+                                break
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+
+            # Intento 2: get_by_role en toda la página (aún más preciso que text=)
+            if easy_apply_btn is None:
+                for _pat in _NAME_PATTERNS:
+                    try:
+                        loc = page.get_by_role("button", name=_pat).first
+                        if loc.is_visible(timeout=5_000):
+                            easy_apply_btn = loc
+                            print(f"  [Applicator-A] Botón Easy Apply (get_by_role page-wide).")
+                            break
+                    except Exception:
+                        continue
+
+            # Intento 3: aria-label y clases CSS de LinkedIn (fallback)
+            if easy_apply_btn is None:
+                for _sel in [
+                    "button[aria-label*='sencilla']",
+                    "button[aria-label*='Easy Apply']",
+                    "button.jobs-apply-button",
+                    ".jobs-s-apply button",
+                    ".jobs-apply-button--top-card",
+                ]:
+                    try:
+                        loc = page.locator(_sel).first
+                        if loc.is_visible(timeout=3_000):
+                            easy_apply_btn = loc
+                            print(f"  [Applicator-A] Botón Easy Apply (CSS {_sel!r}).")
+                            break
+                    except Exception:
+                        continue
+
+            # Intento 4: wait_for_function con polling 30s (para Ember late-render)
+            if easy_apply_btn is None:
+                _WORDS = "solicitud sencilla|easy apply"
+                try:
+                    page.wait_for_function(
+                        f"""() => {{
+                            const re = /{_WORDS}/i;
+                            return Array.from(document.querySelectorAll('button'))
+                                        .some(b => re.test((b.innerText || b.textContent || '').trim()));
+                        }}""",
+                        timeout=30_000,
+                    )
+                    for _pat in _NAME_PATTERNS:
+                        try:
+                            loc = page.get_by_role("button", name=_pat).first
+                            if loc.is_visible(timeout=3_000):
+                                easy_apply_btn = loc
+                                print(f"  [Applicator-A] Botón Easy Apply (late-render).")
+                                break
+                        except Exception:
+                            continue
+                except Exception:
+                    pass
 
             if easy_apply_btn is None:
-                # Apply externo — señalizamos None para que el caller use Canal B
-                # FUERA de este with-block (evita conflicto asyncio con _apply_web).
+                # Tomar screenshot para diagnóstico antes de decidir fallback
+                shot = _screenshot_on_error(page, "no_easy_apply_btn")
+                if shot:
+                    print(f"  [Applicator-A] Screenshot de diagnóstico: {shot}")
                 print("  [Applicator-A] No hay Easy Apply — redirigiendo a canal B.")
                 ctx.close()
                 return None  # ← señal para fallback; NO llamar _apply_web aquí
 
             _human_pause()
             easy_apply_btn.click()
-            print("  [Applicator-A] Easy Apply abierto.")
+            print("  [Applicator-A] Click en Easy Apply ejecutado.")
+            _human_pause(2.0, 3.0)  # LinkedIn anima el modal ~800-1500ms
+            # Screenshot diagnóstico post-click
+            shot_post = _screenshot_on_error(page, "post_click")
+            if shot_post:
+                print(f"  [Applicator-A] Screenshot post-click: {shot_post}")
 
             # ── 4. Esperar modal ─────────────────────────────────────────────
-            modal_selectors = [
-                ".jobs-easy-apply-modal",
-                ".artdeco-modal",
-                "[data-test-modal]",
-            ]
             modal = None
-            for sel in modal_selectors:
-                try:
-                    modal = page.locator(sel).first
-                    modal.wait_for(state="visible", timeout=10_000)
-                    break
-                except Exception:
-                    modal = None
+            # Intento primario: get_by_role (más robusto que CSS)
+            try:
+                modal = page.get_by_role("dialog").first
+                modal.wait_for(state="visible", timeout=15_000)
+                print("  [Applicator-A] Modal detectado via get_by_role('dialog').")
+            except Exception:
+                modal = None
+
+            if modal is None:
+                for sel in [
+                    ".jobs-easy-apply-modal",
+                    ".artdeco-modal",
+                    "[data-test-modal]",
+                    ".jobs-apply-form__container",
+                    "[role='dialog']",
+                ]:
+                    try:
+                        modal = page.locator(sel).first
+                        modal.wait_for(state="visible", timeout=8_000)
+                        print(f"  [Applicator-A] Modal detectado con: {sel!r}")
+                        break
+                    except Exception:
+                        modal = None
+
+            print("  [Applicator-A] Easy Apply abierto." if modal else "  [Applicator-A] Modal no detectado.")
 
             if modal is None:
                 _screenshot_on_error(page, "no_modal")

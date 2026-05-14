@@ -70,7 +70,19 @@ def _mock_linkedin_ctx(submit_visible=True):
     generic_loc.first.is_visible.return_value = True
     generic_loc.first.wait_for = MagicMock()
     generic_loc.first = submit_loc if submit_visible else generic_loc.first
-    mock_page.locator.return_value = generic_loc
+
+    # Locator para "already applied" texts → is_visible=False (trabajo sin aplicar en tests)
+    _already_applied_texts = {"solicitud enviada", "application submitted", "ya aplicaste"}
+    not_applied_loc = MagicMock()
+    not_applied_loc.first.is_visible.return_value = False
+
+    def _locator_side_effect(selector, **kwargs):
+        sel_lower = str(selector).lower()
+        if any(t in sel_lower for t in _already_applied_texts):
+            return not_applied_loc
+        return generic_loc
+
+    mock_page.locator.side_effect = _locator_side_effect
 
     mock_page.screenshot.return_value = None
     mock_page.wait_for_event.side_effect = Exception("closed")
@@ -308,6 +320,11 @@ class TestApplyLinkedinCanalAV2:
         no_btn = MagicMock()
         no_btn.is_visible.return_value = False
         mock_page.locator.return_value.first = no_btn
+        # get_by_role también debe devolver is_visible=False para simular ausencia del botón
+        mock_page.get_by_role.return_value.first.is_visible.return_value = False
+        # .filter(has_text=...).first.wait_for() debe lanzar para indicar timeout sin botón
+        mock_page.locator.return_value.filter.return_value.first.wait_for.side_effect = Exception("Timeout: no button")
+        mock_page.locator.return_value.filter.return_value.first.is_visible.return_value = False
 
         mock_ctx = MagicMock()
         mock_ctx.pages = [mock_page]
@@ -362,6 +379,11 @@ class TestApplyLinkedinCanalAV2:
         no_btn = MagicMock()
         no_btn.is_visible.return_value = False
         mock_page.locator.return_value.first = no_btn
+        # get_by_role también debe devolver is_visible=False
+        mock_page.get_by_role.return_value.first.is_visible.return_value = False
+        # .filter(has_text=...).first.wait_for() debe lanzar para indicar timeout sin botón
+        mock_page.locator.return_value.filter.return_value.first.wait_for.side_effect = Exception("Timeout: no button")
+        mock_page.locator.return_value.filter.return_value.first.is_visible.return_value = False
 
         mock_ctx = MagicMock()
         mock_ctx.pages = [mock_page]

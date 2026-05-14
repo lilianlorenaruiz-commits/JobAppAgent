@@ -21,13 +21,13 @@ from agents.applicator import apply
 
 # ── Job de prueba — portal de empleo (Canal B) ─────────────────────────────────
 TEST_JOB = {
-    "cargo":     "Trade Marketing Specialist",
-    "empresa":   "Computrabajo",
-    "url":       "https://www.computrabajo.com.co/trabajo-de-trade-marketing",
+    "cargo":     "Especialista de Trade Marketing",
+    "empresa":   "Manpower Group Colombia",
+    "url":       "https://co.computrabajo.com/trabajo-de-trade-marketing#7F57529845287C0D61373E686DCF3405",
     "modalidad": "Presencial",
     "ubicacion": "Bogotá",
     "rama":      "B",
-    "score":     86,
+    "score":     88,
 }
 
 # ── PDF disponible ─────────────────────────────────────────────────────────────

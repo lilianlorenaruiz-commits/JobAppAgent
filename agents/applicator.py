@@ -29,9 +29,20 @@ except ImportError:
     anthropic = None  # Usado solo en Canal C LLM body y Canal A smart fill
 
 try:
-    from agents.telegram_hitl import send_cv_ready_email, send_email_body
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None  # Playwright opcional — dry_run funciona sin él
+
+try:
+    from agents.telegram_hitl import (
+        send_cv_ready_email,
+        send_cv_ready_browser,
+        send_email_body,
+    )
 except ImportError:
     def send_cv_ready_email(jobs):  # noqa: E301
+        pass
+    def send_cv_ready_browser(jobs, timeout_min=5):  # noqa: E301
         pass
     def send_email_body(job, body_text):  # noqa: E301
         pass
@@ -99,7 +110,7 @@ def _apply_linkedin(job: dict, pdf_path: str) -> dict:
     navegador abierto 60s para que Lorena complete manualmente y devuelve
     "enviado=False" para que el orquestador lo marque como Pendiente.
     """
-    from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
+    from playwright.sync_api import TimeoutError as PwTimeout
 
     url = job.get("url", "")
     cargo = job.get("cargo", "")
@@ -317,15 +328,54 @@ def _find_next_button(page):
 
 # ── Canal B: Web empresa (headful semi-manual) ────────────────────────────────
 
+def _click_apply_button(page) -> bool:
+    """
+    Intenta hacer click en el botón Apply/Aplicar/Postularme de la página.
+    Prueba selectores comunes en portales hispanohablantes y en inglés.
+    Retorna True si encontró y clickeó el botón, False si no encontró ninguno.
+    Nunca lanza excepción — errores de Playwright se silencian internamente.
+    """
+    selectors = [
+        "button:has-text('Aplicar')",
+        "button:has-text('Apply')",
+        "button:has-text('Postularme')",
+        "button:has-text('Postulate')",
+        "button:has-text('Aplicarme')",
+        "a:has-text('Aplicar')",
+        "a:has-text('Apply')",
+        "button[class*='apply']",
+        "a[class*='apply']",
+        ".apply-button",
+        "#apply-button",
+    ]
+    for sel in selectors:
+        try:
+            loc = page.locator(sel).first
+            if loc.is_visible(timeout=2_000):
+                _human_pause(0.5, 1.0)
+                loc.click()
+                print(f"  [Applicator-B] Botón clickeado: {sel}")
+                return True
+        except Exception:
+            continue
+    print("  [Applicator-B] No se encontró botón Apply — Lorena navega manualmente.")
+    return False
+
+
 def _apply_web(job: dict, pdf_path: str) -> dict:
-    """Abre el navegador en la URL de la oferta. Lorena completa el formulario manualmente."""
-    from playwright.sync_api import sync_playwright
+    """
+    Abre el portal de empleo en browser headful, intenta clickear Apply
+    y notifica a Lorena por Telegram para que complete el formulario.
 
-    url = job.get("url", "")
-    cargo = job.get("cargo", "")
-    empresa = job.get("empresa", "")
+    Lorena tiene HITL_TIMEOUT_S segundos para completar y cerrar el browser.
+    Nunca hace submit automático.
+    """
+    url         = job.get("url", "")
+    cargo       = job.get("cargo", "")
+    empresa     = job.get("empresa", "")
+    timeout_min = config.HITL_TIMEOUT_S // 60
 
-    print(f"  [Applicator-B] Abriendo portal empresa: {cargo} @ {empresa}")
+    print(f"  [Applicator-B] Abriendo portal: {cargo} @ {empresa}")
     print(f"  URL: {url}")
     print(f"  CV para subir: {pdf_path}")
 
@@ -339,11 +389,29 @@ def _apply_web(job: dict, pdf_path: str) -> dict:
         )
         page = ctx.new_page() if not ctx.pages else ctx.pages[0]
         page.goto(url, timeout=30_000, wait_until="domcontentloaded")
+        _human_pause(1.0, 2.0)
 
-        print("  [Applicator-B] Navegador abierto. Completa el formulario y cierra el navegador.")
-        # Esperar hasta que el usuario cierre el navegador o 5 minutos
+        # Intentar click automático en Apply
+        clicked = _click_apply_button(page)
+
+        # Notificación Telegram HITL
         try:
-            page.wait_for_event("close", timeout=300_000)
+            send_cv_ready_browser([{**job}], timeout_min=timeout_min)
+        except Exception as e:
+            print(f"  [Applicator-B] Telegram no enviado: {e}")
+
+        if clicked:
+            msg = (f"Botón Apply clickeado. Completa el formulario "
+                   f"en {timeout_min} min y cierra el browser.")
+        else:
+            msg = (f"Browser abierto. Navega a Apply manualmente, "
+                   f"completa en {timeout_min} min y cierra.")
+
+        print(f"  [Applicator-B] {msg}")
+        print(f"  CV disponible en: {pdf_path}")
+
+        try:
+            page.wait_for_event("close", timeout=config.HITL_TIMEOUT_S * 1_000)
         except Exception:
             pass
         finally:
@@ -354,9 +422,9 @@ def _apply_web(job: dict, pdf_path: str) -> dict:
 
     return {
         "enviado": False,
-        "canal": "B",
-        "url": url,
-        "mensaje": f"Navegador abierto para aplicación manual: {cargo} @ {empresa}",
+        "canal":   "B",
+        "url":     url,
+        "mensaje": f"{msg} | CV: {os.path.basename(pdf_path)}",
     }
 
 

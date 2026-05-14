@@ -291,6 +291,64 @@ class TestApplyLinkedinCanalAV2:
 
     # ── Ciclo 25 ──────────────────────────────────────────────────────────────
 
+    # ── Ciclo 26 ──────────────────────────────────────────────────────────────
+
+    def test_no_easy_apply_calls_apply_web_AFTER_playwright_context_closes(self):
+        """
+        Cuando no hay Easy Apply, _apply_web debe llamarse DESPUÉS de que el
+        contexto sync_playwright haya cerrado — no desde adentro.
+        Verifica que _apply_web recibe la llamada y puede abrir su propio
+        sync_playwright sin conflicto de asyncio.
+        """
+        from agents.applicator import apply
+
+        mock_page = MagicMock()
+        mock_page.url = "https://www.linkedin.com/jobs/view/123"
+
+        no_btn = MagicMock()
+        no_btn.is_visible.return_value = False
+        mock_page.locator.return_value.first = no_btn
+
+        mock_ctx = MagicMock()
+        mock_ctx.pages = [mock_page]
+
+        pw_exited = []  # rastrea si __exit__ fue llamado antes de _apply_web
+
+        class TrackingPWCM:
+            def __enter__(self_cm):
+                return MagicMock(
+                    chromium=MagicMock(
+                        launch_persistent_context=MagicMock(return_value=mock_ctx)
+                    )
+                )
+            def __exit__(self_cm, *args):
+                pw_exited.append(True)
+                return False
+
+        apply_web_called_after_exit = []
+
+        def fake_apply_web(job, pdf_path):
+            apply_web_called_after_exit.append(bool(pw_exited))
+            return {"enviado": False, "canal": "B", "url": job["url"], "mensaje": "ok"}
+
+        with (
+            patch("agents.applicator.sync_playwright", return_value=TrackingPWCM()),
+            patch("agents.applicator._apply_web", side_effect=fake_apply_web),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False)
+
+        # _apply_web fue llamado DESPUÉS de que sync_playwright hizo __exit__
+        assert apply_web_called_after_exit == [True], (
+            "_apply_web fue llamado DENTRO del contexto Playwright (bug asyncio)"
+        )
+        assert result["canal"] == "B"
+
     def test_no_easy_apply_button_falls_back_to_canal_b(self):
         """
         Si ningún selector de Easy Apply está visible, _apply_linkedin

@@ -24,11 +24,11 @@ from agents.applicator import apply
 # ── Job de prueba — LinkedIn Easy Apply (Canal A) ──────────────────────────────
 # Reemplazar la URL con una oferta real de LinkedIn que tenga Easy Apply
 TEST_JOB = {
-    "cargo":     "Paid Media Manager",
-    "empresa":   "TEST — Smoke Canal A",
-    "url":       "https://www.linkedin.com/jobs/view/REEMPLAZA_CON_JOB_ID",
-    "modalidad": "Híbrido",
-    "ubicacion": "Bogotá",
+    "cargo":     "Por identificar al abrir LinkedIn",
+    "empresa":   "Por identificar al abrir LinkedIn",
+    "url":       "https://www.linkedin.com/jobs/view/4407519233",
+    "modalidad": "Por confirmar",
+    "ubicacion": "Por confirmar",
     "rama":      "A",
     "score":     91,
 }
@@ -70,12 +70,6 @@ print("     que tenga botón 'Easy Apply'")
 print("  3. Si HITL está activo, Telegram recibirá un screenshot para aprobar")
 print()
 
-if "REEMPLAZA_CON_JOB_ID" in TEST_JOB["url"]:
-    print("ERROR: Reemplaza la URL del TEST_JOB con una oferta real de LinkedIn.")
-    print("Ejemplo: https://www.linkedin.com/jobs/view/3912345678")
-    sys.exit(1)
-
-input("Presiona ENTER para continuar (o Ctrl+C para cancelar)...")
 print()
 
 result = apply(TEST_JOB, PDF_PATH, dry_run=False,
@@ -100,4 +94,4 @@ if config.HITL_ENABLED:
 else:
     print("  [ ] (HITL desactivado) ¿Se hizo submit automático?")
 print()
-print("Si todo OK → Canal A aprobado ✅")
+print("Si todo OK -> Canal A aprobado OK")

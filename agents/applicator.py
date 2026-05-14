@@ -207,34 +207,24 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
     return filled
 
 
-def _apply_linkedin(job: dict, pdf_path: str,
-                    cv_text: str = "", job_description: str = "") -> dict:
+def _linkedin_playwright_loop(job: dict, pdf_path: str,
+                              cv_text: str, job_description: str):
     """
-    Intenta LinkedIn Easy Apply con Playwright headful.
+    Corre la sesión Playwright de LinkedIn Easy Apply.
 
-    Flujo:
-      1. Abre navegador con perfil persistente (sesión guardada).
-      2. Navega a la URL del cargo.
-      3. Hace clic en Easy Apply.
-      4. Completa cada paso: CV upload, campos simples, smart fill de texto libre.
-      5. En la página Review/Submit:
-           - HITL_ENABLED=True: screenshot → Telegram → espera SI/NO → submit o cancela.
-           - HITL_ENABLED=False: submit directo.
-
-    Si cualquier paso falla o aparece un formulario inesperado, deja el
-    navegador abierto 60s para que Lorena complete manualmente y devuelve
-    "enviado=False" para que el orquestador lo marque como Pendiente.
+    Retorna:
+      - dict  → resultado final (éxito, error, sesión expirada, etc.)
+      - None  → no había Easy Apply — el caller debe delegar a _apply_web
+                 IMPORTANTE: retornar None aquí permite que el `with sync_playwright()`
+                 cierre su event loop antes de que _apply_web intente abrir el suyo.
     """
     from playwright.sync_api import TimeoutError as PwTimeout
 
-    url    = job.get("url", "")
-    cargo  = job.get("cargo", "")
+    url     = job.get("url", "")
+    cargo   = job.get("cargo", "")
     empresa = job.get("empresa", "")
 
-    print(f"  [Applicator-A] Abriendo LinkedIn: {cargo} @ {empresa}")
-
     with sync_playwright() as p:
-        # Perfil persistente: mantiene cookies y sesión de LinkedIn
         os.makedirs(config.PLAYWRIGHT_USER_DATA_DIR, exist_ok=True)
         ctx = p.chromium.launch_persistent_context(
             config.PLAYWRIGHT_USER_DATA_DIR,
@@ -264,7 +254,6 @@ def _apply_linkedin(job: dict, pdf_path: str,
                 }
 
             # ── 3. Easy Apply button ─────────────────────────────────────────
-            # LinkedIn usa varios selectores según versión de página
             btn_selectors = [
                 "button.jobs-apply-button",
                 "button[data-job-id]",
@@ -282,10 +271,11 @@ def _apply_linkedin(job: dict, pdf_path: str,
                     continue
 
             if easy_apply_btn is None:
-                # Puede ser "Apply" externo (redirige a empresa) — tratar como canal B
-                print("  [Applicator-A] No hay Easy Apply — redirigiendo a canal B (web empresa).")
+                # Apply externo — señalizamos None para que el caller use Canal B
+                # FUERA de este with-block (evita conflicto asyncio con _apply_web).
+                print("  [Applicator-A] No hay Easy Apply — redirigiendo a canal B.")
                 ctx.close()
-                return _apply_web(job, pdf_path)
+                return None  # ← señal para fallback; NO llamar _apply_web aquí
 
             _human_pause()
             easy_apply_btn.click()
@@ -377,7 +367,6 @@ def _apply_linkedin(job: dict, pdf_path: str,
                 # e) Buscar botón Next / Review
                 next_btn = _find_next_button(page)
                 if next_btn is None:
-                    # Formulario con preguntas no esperadas — dejar abierto
                     print("  [Applicator-A] Formulario inesperado — deja el navegador abierto para completar manualmente.")
                     try:
                         page.wait_for_event("close", timeout=300_000)
@@ -391,7 +380,7 @@ def _apply_linkedin(job: dict, pdf_path: str,
 
                 next_btn.click()
 
-            # Si llegamos aquí, agotamos los pasos sin submit
+            # Agotamos los pasos sin llegar a Submit
             _screenshot_on_error(page, "max_steps")
             ctx.close()
             return {
@@ -413,6 +402,24 @@ def _apply_linkedin(job: dict, pdf_path: str,
                 "enviado": False, "canal": "A", "url": url,
                 "mensaje": f"Error inesperado en LinkedIn Easy Apply: {e}",
             }
+
+
+def _apply_linkedin(job: dict, pdf_path: str,
+                    cv_text: str = "", job_description: str = "") -> dict:
+    """
+    Intenta LinkedIn Easy Apply con Playwright headful.
+
+    Delega la sesión Playwright a _linkedin_playwright_loop. Si ese helper
+    devuelve None (no hay Easy Apply), llama a _apply_web DESPUÉS de que el
+    contexto Playwright haya cerrado — evitando el conflicto asyncio que ocurre
+    cuando asyncio.run() se llama desde dentro del event loop de Playwright sync.
+    """
+    print(f"  [Applicator-A] Abriendo LinkedIn: {job.get('cargo')} @ {job.get('empresa')}")
+    result = _linkedin_playwright_loop(job, pdf_path, cv_text, job_description)
+    if result is None:
+        # Easy Apply no disponible → Canal B (llamado FUERA del contexto Playwright)
+        return _apply_web(job, pdf_path)
+    return result
 
 
 def _maybe_upload_cv(page, pdf_path: str) -> None:

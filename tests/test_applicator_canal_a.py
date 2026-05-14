@@ -167,6 +167,18 @@ class TestGenerateFieldAnswer:
         call_args = str(client.messages.create.call_args)
         assert "Lorena Ruiz" in call_args or "paid media" in call_args.lower()
 
+    # ── Ciclo 22 ──────────────────────────────────────────────────────────────
+
+    def test_returns_empty_string_when_claude_raises(self):
+        """Si la API de Anthropic lanza excepción, retorna '' sin propagar."""
+        from agents.applicator import _generate_field_answer
+        boom_client = MagicMock()
+        boom_client.messages.create.side_effect = Exception("API rate limit")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = boom_client
+            result = _generate_field_answer("¿Cuántos años de experiencia?", _CV, _JD)
+        assert result == ""
+
 
 # ── Ciclo 19: _fill_free_text_fields ──────────────────────────────────────────
 
@@ -219,6 +231,20 @@ class TestFillFreeTextFields:
             result = _fill_free_text_fields(page, _CV, _JD)
         assert isinstance(result, int)
 
+    # ── Ciclo 23 ──────────────────────────────────────────────────────────────
+
+    def test_does_not_fill_when_answer_is_empty(self):
+        """Si Claude devuelve '' (excepción o sin anthropic), field.fill() NO se llama."""
+        from agents.applicator import _fill_free_text_fields
+        field = _mock_field(placeholder="¿Por qué este cargo?", value="")
+        page  = MagicMock()
+        page.locator.return_value.all.return_value = [field]
+        # Claude responde vacío
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = _mock_claude("")
+            _fill_free_text_fields(page, _CV, _JD)
+        field.fill.assert_not_called()
+
 
 # ── Ciclo 20: send_screenshot_for_approval_sync ───────────────────────────────
 
@@ -262,6 +288,52 @@ class TestSendScreenshotSync:
 # ── Ciclo 21: _apply_linkedin() v2 ────────────────────────────────────────────
 
 class TestApplyLinkedinCanalAV2:
+
+    # ── Ciclo 25 ──────────────────────────────────────────────────────────────
+
+    def test_no_easy_apply_button_falls_back_to_canal_b(self):
+        """
+        Si ningún selector de Easy Apply está visible, _apply_linkedin
+        delega en _apply_web y el resultado tiene canal 'B'.
+        """
+        from agents.applicator import apply
+        mock_page = MagicMock()
+        mock_page.url = "https://www.linkedin.com/jobs/view/123"
+
+        # Todos los is_visible() devuelven False → ningún botón encontrado
+        no_btn = MagicMock()
+        no_btn.is_visible.return_value = False
+        mock_page.locator.return_value.first = no_btn
+
+        mock_ctx = MagicMock()
+        mock_ctx.pages = [mock_page]
+
+        mock_pw_instance = MagicMock()
+        mock_pw_instance.chromium.launch_persistent_context.return_value = mock_ctx
+
+        mock_pw_cm = MagicMock()
+        mock_pw_cm.__enter__.return_value = mock_pw_instance
+        mock_pw_cm.__exit__.return_value = False
+
+        canal_b_result = {
+            "enviado": False, "canal": "B",
+            "url": _JOB_A["url"], "mensaje": "Browser abierto Canal B",
+        }
+
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator._apply_web", return_value=canal_b_result) as mock_web,
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False)
+
+        mock_web.assert_called_once()
+        assert result["canal"] == "B"
 
     def test_accepts_cv_text_and_job_description(self):
         from agents.applicator import apply
@@ -332,6 +404,42 @@ class TestApplyLinkedinCanalAV2:
             result = apply(_JOB_A, "cv.pdf", dry_run=False, cv_text=_CV, job_description=_JD)
         assert result["enviado"] is False
         assert "HITL" in result["mensaje"] or "cancel" in result["mensaje"].lower()
+
+    # ── Ciclo 24 ──────────────────────────────────────────────────────────────
+
+    def test_login_wall_returns_enviado_false_with_message(self):
+        """
+        Si LinkedIn redirige a /login o /authwall, el agente retorna
+        enviado=False con un mensaje claro — sin crash.
+        """
+        from agents.applicator import apply
+        mock_page = MagicMock()
+        mock_page.url = "https://www.linkedin.com/login"  # sesión expirada
+
+        mock_ctx = MagicMock()
+        mock_ctx.pages = [mock_page]
+
+        mock_pw_instance = MagicMock()
+        mock_pw_instance.chromium.launch_persistent_context.return_value = mock_ctx
+
+        mock_pw_cm = MagicMock()
+        mock_pw_cm.__enter__.return_value = mock_pw_instance
+        mock_pw_cm.__exit__.return_value = False
+
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False)
+
+        assert result["enviado"] is False
+        assert result["canal"] == "A"
+        assert "sesión" in result["mensaje"].lower() or "login" in result["mensaje"].lower()
 
     def test_hitl_disabled_no_screenshot_sent(self):
         from agents.applicator import apply

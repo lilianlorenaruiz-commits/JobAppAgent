@@ -176,7 +176,13 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
 
     filled = 0
     try:
-        selector = "textarea, input[type='text']:not([name*='phone']):not([name*='email'])"
+        selector = (
+            "textarea, "
+            "input[type='text']"
+            ":not([name*='phone']):not([id*='phone'])"
+            ":not([name*='email']):not([id*='email'])"
+            ":not([name*='name']):not([id*='first']):not([id*='last'])"
+        )
         fields = page.locator(selector).all()
         for field in fields:
             try:

@@ -177,12 +177,15 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
 
     filled = 0
     try:
+        # Excluir: teléfono, email, nombre, campos numéricos (salario, años, etc.)
+        # No incluir <select> (dropdowns) — requieren lógica separada
         selector = (
             "textarea, "
             "input[type='text']"
             ":not([name*='phone']):not([id*='phone'])"
             ":not([name*='email']):not([id*='email'])"
             ":not([name*='name']):not([id*='first']):not([id*='last'])"
+            ":not([type='number']):not([inputmode='numeric']):not([inputmode='decimal'])"
         )
         fields = page.locator(selector).all()
         for field in fields:
@@ -279,58 +282,61 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                 }
 
             # ── 4. Easy Apply button ─────────────────────────────────────────
-            # LinkedIn renderiza el botón "Solicitud sencilla / Easy Apply" en el
-            # panel de detalle del cargo.  El panel de "trabajos similares" también
-            # contiene badges con ese texto, por lo que selectors demasiado amplios
-            # (text=) encuentran el badge, navegan al trabajo equivocado y no abren
-            # el modal.  Estrategia en capas, de más a menos específico:
+            # LinkedIn usa Shadow DOM para el botón "Solicitud sencilla / Easy Apply".
+            # document.querySelectorAll NO penetra shadow DOM.
+            # Playwright text locator y get_by_role SÍ penetran shadow DOM.
+            #
+            # Estrategia:
+            #   1. Esperar render completo (3-5s adicionales para Ember late hydration)
+            #   2. get_by_role("button") page-wide — penetra shadow DOM
+            #   3. text= locator con timeout extendido — también penetra shadow DOM
+            #      (verificando que el elemento sea un button para evitar badge misclick)
+            #   4. CSS aria-label fallback
             easy_apply_btn = None
 
-            # Intento 1: get_by_role("button") scoped al top-card del cargo
-            # El panel de detalle de LinkedIn usa .jobs-unified-top-card o
-            # .job-view-layout; los badges de la lista son <a> o <span>, no <button>
-            _SCOPE_SELECTORS = [
-                ".jobs-unified-top-card",
-                ".jobs-details__main-content",
-                ".job-view-layout",
-            ]
             _NAME_PATTERNS = [
                 re.compile(r"solicitud sencilla", re.IGNORECASE),
                 re.compile(r"easy apply", re.IGNORECASE),
-                re.compile(r"postulaci", re.IGNORECASE),   # "Postulación sencilla"
+                re.compile(r"postulaci", re.IGNORECASE),
             ]
-            for _scope_sel in _SCOPE_SELECTORS:
-                if easy_apply_btn:
-                    break
+            _EASY_APPLY_TEXTS = ("Solicitud sencilla", "Easy Apply", "Postulación sencilla")
+
+            # Esperar render completo de componentes shadow DOM de LinkedIn
+            _human_pause(3.0, 4.0)
+
+            # Intento 1: get_by_role("button") — penetra shadow DOM, más estricto
+            for _pat in _NAME_PATTERNS:
                 try:
-                    scope = page.locator(_scope_sel).first
-                    if not scope.is_visible(timeout=3_000):
-                        continue
-                    for _pat in _NAME_PATTERNS:
-                        try:
-                            loc = scope.get_by_role("button", name=_pat).first
-                            if loc.is_visible(timeout=5_000):
-                                easy_apply_btn = loc
-                                print(f"  [Applicator-A] Botón Easy Apply en {_scope_sel!r}.")
-                                break
-                        except Exception:
-                            continue
+                    loc = page.get_by_role("button", name=_pat).first
+                    if loc.is_visible(timeout=8_000):
+                        easy_apply_btn = loc
+                        print(f"  [Applicator-A] Botón Easy Apply (get_by_role, pat={_pat.pattern!r}).")
+                        break
                 except Exception:
                     continue
 
-            # Intento 2: get_by_role en toda la página (aún más preciso que text=)
+            # Intento 2: text locator — también penetra shadow DOM; verificar que
+            # el elemento tenga un ancestor <button> para evitar badge misclick
             if easy_apply_btn is None:
-                for _pat in _NAME_PATTERNS:
+                for _txt in _EASY_APPLY_TEXTS:
                     try:
-                        loc = page.get_by_role("button", name=_pat).first
-                        if loc.is_visible(timeout=5_000):
-                            easy_apply_btn = loc
-                            print(f"  [Applicator-A] Botón Easy Apply (get_by_role page-wide).")
+                        loc = page.locator(f"text={_txt}").first
+                        if loc.is_visible(timeout=8_000):
+                            # Verificar que sea (o esté dentro de) un <button>
+                            try:
+                                btn = loc.locator("xpath=ancestor-or-self::button").first
+                                if btn.is_visible(timeout=1_000):
+                                    easy_apply_btn = btn
+                                else:
+                                    easy_apply_btn = loc  # fallback: click en el span
+                            except Exception:
+                                easy_apply_btn = loc
+                            print(f"  [Applicator-A] Botón Easy Apply (text={_txt!r}).")
                             break
                     except Exception:
                         continue
 
-            # Intento 3: aria-label y clases CSS de LinkedIn (fallback)
+            # Intento 3: aria-label y clases CSS de LinkedIn
             if easy_apply_btn is None:
                 for _sel in [
                     "button[aria-label*='sencilla']",
@@ -347,30 +353,6 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                             break
                     except Exception:
                         continue
-
-            # Intento 4: wait_for_function con polling 30s (para Ember late-render)
-            if easy_apply_btn is None:
-                _WORDS = "solicitud sencilla|easy apply"
-                try:
-                    page.wait_for_function(
-                        f"""() => {{
-                            const re = /{_WORDS}/i;
-                            return Array.from(document.querySelectorAll('button'))
-                                        .some(b => re.test((b.innerText || b.textContent || '').trim()));
-                        }}""",
-                        timeout=30_000,
-                    )
-                    for _pat in _NAME_PATTERNS:
-                        try:
-                            loc = page.get_by_role("button", name=_pat).first
-                            if loc.is_visible(timeout=3_000):
-                                easy_apply_btn = loc
-                                print(f"  [Applicator-A] Botón Easy Apply (late-render).")
-                                break
-                        except Exception:
-                            continue
-                except Exception:
-                    pass
 
             if easy_apply_btn is None:
                 # Tomar screenshot para diagnóstico antes de decidir fallback
@@ -427,7 +409,7 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                 }
 
             # ── 5. Navegar pasos del formulario ──────────────────────────────
-            max_steps = 10
+            max_steps = 20
             for step in range(max_steps):
                 _human_pause(0.8, 1.5)
                 print(f"  [Applicator-A] Paso {step + 1}")
@@ -441,12 +423,29 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                 # c) Smart fill: campos de texto libre con Claude
                 _fill_free_text_fields(page, cv_text, job_description)
 
-                # d) Detectar si hay el botón Submit (último paso)
-                submit_btn = page.locator(
-                    "button[aria-label='Submit application'], "
-                    "button:has-text('Submit application')"
-                ).first
-                if submit_btn.is_visible(timeout=2_000):
+                # d) Detectar si hay el botón Submit / Review (último paso)
+                # "Review" aparece en la última página de preguntas antes del envío.
+                # "Enviar solicitud" / "Submit application" aparece en la pantalla final.
+                # LinkedIn puede estar en español o inglés según la cuenta.
+                submit_btn = None
+                for _submit_sel in [
+                    "button[aria-label='Submit application']",
+                    "button[aria-label='Enviar solicitud']",
+                    "button[aria-label='Review your application']",
+                    "button:has-text('Submit application')",
+                    "button:has-text('Enviar solicitud')",
+                    "button:has-text('Enviar')",
+                    "button:has-text('Review')",
+                    "button:has-text('Revisar')",
+                ]:
+                    try:
+                        loc = page.locator(_submit_sel).first
+                        if loc.is_visible(timeout=1_500):
+                            submit_btn = loc
+                            break
+                    except Exception:
+                        continue
+                if submit_btn is not None and submit_btn.is_visible(timeout=500):
                     _human_pause(0.5, 1.0)
 
                     if config.HITL_ENABLED:
@@ -582,12 +581,15 @@ def _fill_simple_fields(page) -> None:
 
 
 def _find_next_button(page):
-    """Retorna el botón Next / Review / Continue si está visible."""
+    """Retorna el botón Next / Siguiente / Review / Continue si está visible."""
     labels = [
         "Continue to next step",
         "Review your application",
+        "Revisar tu solicitud",
         "Next",
+        "Siguiente",
         "Continue",
+        "Continuar",
     ]
     for label in labels:
         try:

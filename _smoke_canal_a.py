@@ -26,9 +26,9 @@ from agents.applicator import apply
 # enviado=True directamente. Para probar el flujo completo usa una oferta sin aplicar.
 # Reemplaza la URL con una oferta real de LinkedIn que tenga Easy Apply:
 TEST_JOB = {
-    "cargo":     "Planner",
-    "empresa":   "Havas Colombia",
-    "url":       "https://www.linkedin.com/jobs/view/4412124310/",
+    "cargo":     "Media Planning Manager",
+    "empresa":   "OMD Colombia",
+    "url":       "https://www.linkedin.com/jobs/view/4405866108/",
     "modalidad": "Híbrido",
     "ubicacion": "Bogotá D.C.",
     "rama":      "A",

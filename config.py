@@ -46,3 +46,17 @@ MODEL_MAIN = "claude-sonnet-4-6"           # CV rewriting
 APIFY_ACTOR_ID   = "curious_coder~linkedin-jobs-scraper"
 APIFY_MAX_WAIT_S = 300    # 5 min máximo por run
 APIFY_POLL_S     = 10     # intervalo de polling
+
+# ── Playwright / Applicator ────────────────────────────────────────────────────
+# Directorio para el perfil persistente del navegador (mantiene sesión LinkedIn).
+# Primera vez: abrir manualmente y hacer login en LinkedIn.
+PLAYWRIGHT_USER_DATA_DIR = os.path.join(BASE_DIR, "browser_profile")
+
+# Datos personales para formularios de aplicación
+APPLICANT_PHONE = "+57 315 256 1884"
+APPLICANT_EMAIL = "lilian@lorena-ruiz.com"
+
+# ── Applicator v2 — HITL + Smart Fill ─────────────────────────────────────────
+HITL_ENABLED   = True   # Si True: pausa antes de Submit Canal A (primeras 2 semanas)
+HITL_TIMEOUT_S = 300    # Segundos de espera de confirmación Telegram (5 min)
+EMAIL_ACCOUNT  = "lilianlorena.ruiz@gmail.com"  # Cuenta para notificación Canal C

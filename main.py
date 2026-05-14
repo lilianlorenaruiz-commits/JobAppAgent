@@ -35,6 +35,7 @@ from agents.cv_rewriter  import rewrite
 from agents.ats_auditor  import audit, MAX_AUDIT_CYCLES
 from agents.pdf_generator import generate
 from agents.reporter     import register, send_daily_report, send_alert, get_daily_stats
+from agents.applicator   import apply as aplicar
 
 RAMAS = ["A", "B", "C"]
 HORA_DIARIA = "08:00"
@@ -42,7 +43,7 @@ HORA_DIARIA = "08:00"
 
 # ── Pipeline por cargo ─────────────────────────────────────────────────────────
 
-def _process_job(cv: dict, job: dict, rama: str) -> dict:
+def _process_job(cv: dict, job: dict, rama: str, dry_run: bool = False) -> dict:
     """Procesa un cargo a través del pipeline completo. Retorna resumen del resultado."""
     resultado = {
         "cargo":   job["cargo"],
@@ -144,14 +145,34 @@ def _process_job(cv: dict, job: dict, rama: str) -> dict:
         register(job, match, "", resultado="Fallido")
         return resultado
 
-    # 4. Registrar como Pendiente (el Aplicador lo actualizará a Enviado)
-    register(job, match, pdf_path, resultado="Pendiente", status_aplicacion="A")
+    # 4. Aplicar — determina canal y envía
+    try:
+        apply_result = aplicar(
+            job, pdf_path,
+            dry_run=dry_run,
+            cv_text=rewrite_result["cv_text"],
+            job_description=job.get("description", ""),
+        )
+        canal        = apply_result["canal"]
+        final_status = "Enviado" if apply_result["enviado"] else "Pendiente"
+        print(f"  [Applicator] Canal {canal} — {apply_result['mensaje']}")
+    except Exception as e:
+        apply_result = {"enviado": False, "canal": "A", "mensaje": str(e)}
+        canal        = "A"
+        final_status = "Pendiente"
+        print(f"  [Applicator] Error: {e} — marcando como Pendiente")
 
-    resultado["status"] = "pendiente_envio"
-    resultado["motivo"] = f"Score {match['score']}% | ATS {rewrite_result['ats_score']}%"
+    # 5. Registrar resultado final en BD
+    register(job, match, pdf_path, resultado=final_status, status_aplicacion=canal)
+
+    resultado["status"] = "enviado" if final_status == "Enviado" else "pendiente_envio"
+    resultado["motivo"]  = (
+        f"Score {match['score']}% | ATS {rewrite_result['ats_score']}% | "
+        f"Canal {canal} — {apply_result['mensaje']}"
+    )
     print(
         f"  [OK] {job['cargo']} @ {job['empresa']} "
-        f"— score {match['score']}% | ATS {rewrite_result['ats_score']}%"
+        f"— {final_status} | canal {canal} | score {match['score']}%"
     )
     return resultado
 
@@ -177,7 +198,7 @@ def _run_rama(cv: dict, rama: str, dry_run: bool, limit: int | None = None) -> l
     resultados = []
     for job in jobs:
         print(f"\n  Procesando: {job['cargo']} @ {job['empresa']}")
-        r = _process_job(cv, job, rama)
+        r = _process_job(cv, job, rama, dry_run=dry_run)
         resultados.append(r)
 
     return resultados

@@ -1,0 +1,24 @@
+{
+  "rama": "C",
+  "nombre": "Paid Media y Performance",
+  "terminos_busqueda": [
+    "Paid Media",
+    "Amazon Ads",
+    "Performance Marketing",
+    "PPC Specialist",
+    "LinkedIn Ads"
+  ],
+  "ubicacion": ["Bogotá", "Colombia"],
+  "modalidades": ["Presencial", "Híbrido", "Remoto"],
+  "dias_publicacion_max": 16,
+  "idioma_requerido": "Inglés C1",
+  "skills_target": [
+    "Google Ads",
+    "Meta Ads",
+    "Amazon Ads",
+    "LinkedIn Ads",
+    "Programmatic"
+  ],
+  "threshold_match": 85,
+  "threshold_ats": 95
+}

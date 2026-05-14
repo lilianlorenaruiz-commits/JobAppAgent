@@ -1,0 +1,23 @@
+{
+  "rama": "B",
+  "nombre": "Retail y Trade Marketing",
+  "terminos_busqueda": [
+    "Marketing Manager Retail",
+    "Trade Marketing",
+    "Category Manager",
+    "Shopper Marketing",
+    "Retail Marketing"
+  ],
+  "ubicacion": ["Bogotá", "Colombia"],
+  "modalidades": ["Presencial", "Híbrido", "Remoto"],
+  "dias_publicacion_max": 16,
+  "idioma_requerido": "Inglés C1",
+  "skills_target": [
+    "Trade Marketing",
+    "Category Management",
+    "Shopper Insights",
+    "P&L"
+  ],
+  "threshold_match": 85,
+  "threshold_ats": 95
+}

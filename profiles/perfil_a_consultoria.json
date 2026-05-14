@@ -1,0 +1,23 @@
+{
+  "rama": "A",
+  "nombre": "Consultoría de Marca y Marketing",
+  "terminos_busqueda": [
+    "Brand Strategist",
+    "Marketing Consultant",
+    "Digital Transformation",
+    "Brand Consultant",
+    "Marketing Strategy"
+  ],
+  "ubicacion": ["Bogotá", "Colombia"],
+  "modalidades": ["Presencial", "Híbrido", "Remoto"],
+  "dias_publicacion_max": 16,
+  "idioma_requerido": "Inglés C1",
+  "skills_target": [
+    "Brand Strategy",
+    "Digital Transformation",
+    "Data Analysis",
+    "C1 English"
+  ],
+  "threshold_match": 85,
+  "threshold_ats": 95
+}

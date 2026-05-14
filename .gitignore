@@ -1,0 +1,21 @@
+# API keys — NEVER commit
+config/*.txt
+
+# Generated PDFs
+output/
+
+# SQLite runtime DB (schema.sql is tracked, not the DB itself)
+database/job_app.db
+
+# Python cache
+__pycache__/
+agents/__pycache__/
+*.pyc
+*.pyo
+
+# Debug artifacts
+_debug_audit_output.json
+
+# OS
+.DS_Store
+Thumbs.db

@@ -19,6 +19,6 @@
     "LinkedIn Ads",
     "Programmatic"
   ],
-  "threshold_match": 85,
+  "threshold_match": 75,
   "threshold_ats": 95
 }

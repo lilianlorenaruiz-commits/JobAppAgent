@@ -35,18 +35,33 @@ def _require_apify_key() -> str:
     return key
 
 
-def _start_run(queries: list[str], location: str) -> str:
-    """Lanza el actor de Apify y retorna el runId."""
+def _build_linkedin_urls(queries: list[str], location: str, dias_max: int = 16) -> list[str]:
+    """Convierte términos de búsqueda en URLs de LinkedIn Jobs (strings planos)."""
+    import urllib.parse
+    dias_segundos = min(dias_max, 30) * 86400
+    urls = []
+    for q in queries:
+        params = urllib.parse.urlencode({
+            "keywords": q,
+            "location": location,
+            "f_TPR":    f"r{dias_segundos}",
+        })
+        urls.append(f"https://www.linkedin.com/jobs/search/?{params}")
+    return urls
+
+
+def _start_run(queries: list[str], location: str, dias_max: int = 16) -> str:
+    """Lanza el actor de Apify (curious_coder) y retorna el runId."""
     key = _require_apify_key()
+    urls = _build_linkedin_urls(queries, location, dias_max)
     payload = {
-        "queries":  queries,
-        "location": location,
-        "rows":     25,
-        "proxy":    {"useApifyProxy": True},
+        "urls":  urls,
+        "limit": 25,
+        "proxy": {"useApifyProxy": True},
     }
     r = httpx.post(
         f"{APIFY_BASE}/acts/{config.APIFY_ACTOR_ID}/runs",
-        params={"token": key},
+        headers={"Authorization": f"Bearer {key}"},
         json=payload,
         timeout=30,
     )
@@ -57,11 +72,12 @@ def _start_run(queries: list[str], location: str) -> str:
 def _wait_for_run(run_id: str) -> str:
     """Espera hasta que el run termine y retorna el defaultDatasetId."""
     key = _require_apify_key()
+    headers = {"Authorization": f"Bearer {key}"}
     deadline = time.time() + config.APIFY_MAX_WAIT_S
     while time.time() < deadline:
         r = httpx.get(
             f"{APIFY_BASE}/actor-runs/{run_id}",
-            params={"token": key},
+            headers=headers,
             timeout=30,
         )
         r.raise_for_status()
@@ -80,7 +96,8 @@ def _fetch_dataset(dataset_id: str) -> list[dict]:
     key = _require_apify_key()
     r = httpx.get(
         f"{APIFY_BASE}/datasets/{dataset_id}/items",
-        params={"token": key, "format": "json"},
+        headers={"Authorization": f"Bearer {key}"},
+        params={"format": "json"},
         timeout=60,
     )
     r.raise_for_status()
@@ -102,16 +119,31 @@ def _parse_modalidad(item: dict) -> str:
     return "Presencial"
 
 
+def _strip_html(html: str) -> str:
+    """Elimina tags HTML y decodifica entidades básicas."""
+    import re, html as html_module
+    text = re.sub(r"<[^>]+>", " ", html or "")
+    text = html_module.unescape(text)
+    return re.sub(r"\s{2,}", " ", text).strip()
+
+
 def _normalize(item: dict, rama: str) -> dict:
-    """Mapea campos de Apify al schema interno."""
+    """Mapea campos de Apify (curious_coder) al schema interno."""
+    desc_raw = (
+        item.get("description")
+        or item.get("descriptionHtml")
+        or item.get("jobDescription")
+        or ""
+    )
+    descripcion = _strip_html(desc_raw) if "<" in desc_raw else desc_raw
     return {
         "id_cargo_externo":   str(item.get("id") or item.get("jobId") or ""),
         "cargo":              item.get("title") or item.get("position") or "",
-        "empresa":            item.get("company") or item.get("companyName") or "",
-        "url":                item.get("url") or item.get("jobUrl") or "",
+        "empresa":            item.get("companyName") or item.get("company") or "",
+        "url":                item.get("link") or item.get("url") or item.get("jobUrl") or "",
         "modalidad":          _parse_modalidad(item),
         "ubicacion":          item.get("location") or "",
-        "descripcion":        item.get("description") or item.get("jobDescription") or "",
+        "descripcion":        descripcion,
         "fecha_publicacion":  item.get("postedAt") or item.get("publishedAt") or "",
         "rama":               rama,
     }
@@ -271,8 +303,9 @@ def search_jobs(rama: str, dry_run: bool = False, limit: int | None = None) -> l
     else:
         queries  = perfil["terminos_busqueda"]
         location = perfil["ubicacion"][0]
+        dias_max = perfil.get("dias_publicacion_max", 16)
         print(f"[Scraper] Rama {rama}: {len(queries)} terminos -> Apify")
-        run_id     = _start_run(queries, location)
+        run_id     = _start_run(queries, location, dias_max)
         dataset_id = _wait_for_run(run_id)
         raw_items  = _fetch_dataset(dataset_id)
         print(f"[Scraper] {len(raw_items)} resultados de Apify")

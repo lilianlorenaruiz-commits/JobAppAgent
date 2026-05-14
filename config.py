@@ -43,6 +43,6 @@ MODEL_FAST = "claude-haiku-4-5-20251001"   # skill matching, scoring rápido
 MODEL_MAIN = "claude-sonnet-4-6"           # CV rewriting
 
 # ── Apify ──────────────────────────────────────────────────────────────────────
-APIFY_ACTOR_ID   = "bebity/linkedin-jobs-scraper"
+APIFY_ACTOR_ID   = "curious_coder~linkedin-jobs-scraper"
 APIFY_MAX_WAIT_S = 300    # 5 min máximo por run
 APIFY_POLL_S     = 10     # intervalo de polling

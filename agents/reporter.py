@@ -157,27 +157,28 @@ def _resultado_icon(resultado: str) -> str:
 
 
 def build_daily_report(stats: dict) -> str:
-    lines = [
-        f"<b>RESUMEN DIARIO - {stats['fecha']}</b>",
-        "",
-        f"OK Aplicaciones exitosas: {len(stats['exitosas'])}",
-        f"X  Fallidas: {len(stats['fallidas'])}",
-        f".. Pendientes: {len(stats['pendientes'])}",
-        "",
-        "-" * 30,
-    ]
-    for row in stats["rows"]:
-        cargo, empresa, resultado, score, rama = row
-        icon  = _resultado_icon(resultado)
-        lines.append(
-            f"[{_rama_label(rama)}] {cargo} @ {empresa} "
-            f"-> {icon} {resultado} ({score}%)"
-        )
+    n_pass    = len(stats["pendientes"]) + len(stats["exitosas"])
+    n_skip    = len(stats["fallidas"])
+    n_total   = n_pass + n_skip
 
-    lines += [
+    lines = [
+        f"<b>JobAppAgent — {stats['fecha']}</b>",
         "",
-        f"Total acumulado: {stats['total_acum']} aplicaciones",
+        f"Evaluados hoy: {n_total}",
+        f"Descartados (score bajo o ATS): {n_skip}",
+        f"CVs generados listos para aplicar: {n_pass}",
     ]
+
+    candidatos = stats["pendientes"] + stats["exitosas"]
+    if candidatos:
+        lines += ["", "<b>CVs listos:</b>"]
+        for row in candidatos:
+            cargo, empresa, resultado, score, rama = row
+            lines.append(f"  • [{_rama_label(rama)}] {cargo} @ {empresa} ({score}%)")
+    else:
+        lines += ["", "Sin cargos que pasen los filtros hoy."]
+
+    lines += ["", f"Acumulado total: {stats['total_acum']} aplicaciones"]
     return "\n".join(lines)
 
 

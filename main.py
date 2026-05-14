@@ -17,6 +17,12 @@ import sys
 import traceback
 from datetime import datetime
 
+# Fix Unicode en terminales Windows (cp1252 no soporta emojis ni algunos caracteres LinkedIn)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import schedule
 import time
 

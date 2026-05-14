@@ -1,0 +1,355 @@
+"""
+Ciclo 19 RED→GREEN: Canal A smart fill
+  - _get_field_question() extrae pregunta de placeholder / aria-label / label
+  - _generate_field_answer() llama a Claude con la pregunta + CV + JD
+  - _fill_free_text_fields() detecta campos vacíos y los llena
+
+Ciclo 20 RED→GREEN: send_screenshot_for_approval_sync
+  - envía foto con urllib.request (sin asyncio)
+  - fallback a texto si no hay imagen
+
+Ciclo 21 RED→GREEN: _apply_linkedin() v2
+  - acepta cv_text y job_description
+  - llama _fill_free_text_fields() en cada paso del modal
+  - HITL_ENABLED=True: screenshot → Telegram → SI → Submit
+  - HITL_ENABLED=True: screenshot → Telegram → NO → browser abierto
+  - HITL_ENABLED=False: submit directo sin Telegram
+"""
+import os
+import sys
+from unittest.mock import MagicMock, patch
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+_JOB_A = {
+    "cargo":   "Paid Media Manager",
+    "empresa": "Rappi",
+    "url":     "https://www.linkedin.com/jobs/view/1234567890",
+    "rama":    "A",
+    "score":   91,
+}
+_CV = "Lorena Ruiz. 14 años en paid media. Meta Ads, Google Ads. Presupuestos USD 240K."
+_JD = "We need a Paid Media Manager with Meta Ads and Google Ads experience."
+
+
+# ── helpers ────────────────────────────────────────────────────────────────────
+
+def _mock_claude(text: str):
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text=text)]
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = mock_response
+    return mock_client
+
+
+def _mock_field(placeholder="", aria_label="", field_id="", value="", visible=True):
+    field = MagicMock()
+    field.is_visible.return_value = visible
+    field.get_attribute.side_effect = lambda attr, **kw: {
+        "placeholder": placeholder,
+        "aria-label":  aria_label,
+        "id":          field_id,
+    }.get(attr, "")
+    field.input_value.return_value = value
+    field.text_content.return_value = value
+    return field
+
+
+def _mock_linkedin_ctx(submit_visible=True):
+    """Mock completo de sync_playwright para LinkedIn Easy Apply."""
+    mock_page = MagicMock()
+    mock_page.url = "https://www.linkedin.com/jobs/view/123"
+
+    # Submit button behavior controlado por parámetro
+    submit_loc = MagicMock()
+    submit_loc.is_visible.return_value = submit_visible
+
+    # Locator genérico retorna visible=True para Easy Apply btn y modal
+    generic_loc = MagicMock()
+    generic_loc.first.is_visible.return_value = True
+    generic_loc.first.wait_for = MagicMock()
+    generic_loc.first = submit_loc if submit_visible else generic_loc.first
+    mock_page.locator.return_value = generic_loc
+
+    mock_page.screenshot.return_value = None
+    mock_page.wait_for_event.side_effect = Exception("closed")
+
+    mock_ctx = MagicMock()
+    mock_ctx.pages = [mock_page]
+
+    mock_pw_instance = MagicMock()
+    mock_pw_instance.chromium.launch_persistent_context.return_value = mock_ctx
+
+    mock_pw_cm = MagicMock()
+    mock_pw_cm.__enter__.return_value = mock_pw_instance
+    mock_pw_cm.__exit__.return_value = False
+
+    return mock_pw_cm, mock_ctx, mock_page
+
+
+# ── Ciclo 19: _get_field_question ─────────────────────────────────────────────
+
+class TestGetFieldQuestion:
+
+    def test_returns_placeholder_when_present(self):
+        from agents.applicator import _get_field_question
+        page  = MagicMock()
+        field = _mock_field(placeholder="¿Por qué quieres este cargo?")
+        result = _get_field_question(page, field)
+        assert "cargo" in result or "Por qué" in result
+
+    def test_returns_aria_label_when_no_placeholder(self):
+        from agents.applicator import _get_field_question
+        page  = MagicMock()
+        field = _mock_field(aria_label="Years of experience")
+        result = _get_field_question(page, field)
+        assert "experience" in result.lower() or "Years" in result
+
+    def test_returns_string_when_no_context(self):
+        from agents.applicator import _get_field_question
+        page  = MagicMock()
+        field = _mock_field()
+        page.locator.return_value.first.is_visible.return_value = False
+        result = _get_field_question(page, field)
+        assert isinstance(result, str)
+
+    def test_does_not_raise_on_exception(self):
+        from agents.applicator import _get_field_question
+        page  = MagicMock()
+        field = MagicMock()
+        field.get_attribute.side_effect = Exception("playwright error")
+        result = _get_field_question(page, field)
+        assert isinstance(result, str)
+
+
+# ── Ciclo 19: _generate_field_answer ──────────────────────────────────────────
+
+class TestGenerateFieldAnswer:
+
+    def test_returns_string(self):
+        from agents.applicator import _generate_field_answer
+        client = _mock_claude("14 años de experiencia en paid media.")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = client
+            result = _generate_field_answer("Años de experiencia", _CV, _JD)
+        assert isinstance(result, str)
+
+    def test_max_150_chars(self):
+        from agents.applicator import _generate_field_answer
+        client = _mock_claude("x" * 300)
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = client
+            result = _generate_field_answer("Pregunta", _CV, _JD)
+        assert len(result) <= 150
+
+    def test_returns_empty_when_anthropic_none(self):
+        from agents.applicator import _generate_field_answer
+        with patch("agents.applicator.anthropic", None):
+            result = _generate_field_answer("Pregunta", _CV, _JD)
+        assert result == ""
+
+    def test_prompt_includes_question(self):
+        from agents.applicator import _generate_field_answer
+        client = _mock_claude("respuesta")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = client
+            _generate_field_answer("¿Cuál es tu mayor fortaleza?", _CV, _JD)
+        call_args = str(client.messages.create.call_args)
+        assert "fortaleza" in call_args
+
+    def test_prompt_includes_cv_text(self):
+        from agents.applicator import _generate_field_answer
+        client = _mock_claude("respuesta")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = client
+            _generate_field_answer("Pregunta", _CV, _JD)
+        call_args = str(client.messages.create.call_args)
+        assert "Lorena Ruiz" in call_args or "paid media" in call_args.lower()
+
+
+# ── Ciclo 19: _fill_free_text_fields ──────────────────────────────────────────
+
+class TestFillFreeTextFields:
+
+    def test_returns_zero_when_no_fields(self):
+        from agents.applicator import _fill_free_text_fields
+        page = MagicMock()
+        page.locator.return_value.all.return_value = []
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = _mock_claude("respuesta")
+            result = _fill_free_text_fields(page, _CV, _JD)
+        assert result == 0
+
+    def test_fills_visible_empty_field(self):
+        from agents.applicator import _fill_free_text_fields
+        field = _mock_field(placeholder="¿Por qué este cargo?", value="")
+        page  = MagicMock()
+        page.locator.return_value.all.return_value = [field]
+        client = _mock_claude("Me apasiona el paid media.")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = client
+            result = _fill_free_text_fields(page, _CV, _JD)
+        assert result >= 1
+        field.fill.assert_called_once()
+
+    def test_skips_already_filled_field(self):
+        from agents.applicator import _fill_free_text_fields
+        field = _mock_field(placeholder="¿Por qué?", value="Ya tengo texto")
+        page  = MagicMock()
+        page.locator.return_value.all.return_value = [field]
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = _mock_claude("respuesta")
+            _fill_free_text_fields(page, _CV, _JD)
+        field.fill.assert_not_called()
+
+    def test_returns_zero_when_anthropic_none(self):
+        from agents.applicator import _fill_free_text_fields
+        page = MagicMock()
+        with patch("agents.applicator.anthropic", None):
+            result = _fill_free_text_fields(page, _CV, _JD)
+        assert result == 0
+
+    def test_does_not_raise_on_playwright_error(self):
+        from agents.applicator import _fill_free_text_fields
+        page = MagicMock()
+        page.locator.side_effect = Exception("playwright crash")
+        with patch("agents.applicator.anthropic") as mock_ant:
+            mock_ant.Anthropic.return_value = _mock_claude("respuesta")
+            result = _fill_free_text_fields(page, _CV, _JD)
+        assert isinstance(result, int)
+
+
+# ── Ciclo 20: send_screenshot_for_approval_sync ───────────────────────────────
+
+class TestSendScreenshotSync:
+
+    def test_sends_photo_when_image_exists(self, tmp_path):
+        img = tmp_path / "shot.png"
+        img.write_bytes(b"\x89PNG\r\n")
+        from agents.telegram_hitl import send_screenshot_for_approval_sync
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"{}")))
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        with patch("agents.telegram_hitl.urllib.request.urlopen", return_value=mock_resp) as mock_open:
+            with patch("agents.telegram_hitl._require_telegram", return_value=("tok", "123")):
+                send_screenshot_for_approval_sync(str(img), _JOB_A)
+        assert mock_open.called
+        req_arg = mock_open.call_args[0][0]
+        assert "sendPhoto" in req_arg.full_url
+
+    def test_sends_text_when_no_image(self):
+        from agents.telegram_hitl import send_screenshot_for_approval_sync
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=MagicMock(read=MagicMock(return_value=b"{}")))
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        with patch("agents.telegram_hitl.urllib.request.urlopen", return_value=mock_resp) as mock_open:
+            with patch("agents.telegram_hitl._require_telegram", return_value=("tok", "123")):
+                send_screenshot_for_approval_sync("no_existe.png", _JOB_A)
+        req_arg = mock_open.call_args[0][0]
+        assert "sendMessage" in req_arg.full_url
+
+    def test_does_not_raise_on_network_error(self):
+        from agents.telegram_hitl import send_screenshot_for_approval_sync
+        with patch("agents.telegram_hitl.urllib.request.urlopen", side_effect=Exception("timeout")):
+            with patch("agents.telegram_hitl._require_telegram", return_value=("tok", "123")):
+                try:
+                    send_screenshot_for_approval_sync("no.png", _JOB_A)
+                except Exception:
+                    pytest.fail("send_screenshot_for_approval_sync no debe propagar excepciones")
+
+
+# ── Ciclo 21: _apply_linkedin() v2 ────────────────────────────────────────────
+
+class TestApplyLinkedinCanalAV2:
+
+    def test_accepts_cv_text_and_job_description(self):
+        from agents.applicator import apply
+        result = apply(_JOB_A, "cv.pdf", dry_run=True, cv_text=_CV, job_description=_JD)
+        assert result["canal"] == "A"
+
+    def test_dry_run_does_not_call_fill_free_text(self):
+        from agents.applicator import apply
+        with patch("agents.applicator._fill_free_text_fields") as mock_fill:
+            apply(_JOB_A, "cv.pdf", dry_run=True, cv_text=_CV, job_description=_JD)
+        mock_fill.assert_not_called()
+
+    def test_hitl_enabled_sends_screenshot_before_submit(self):
+        from agents.applicator import apply
+        mock_pw_cm, _, mock_page = _mock_linkedin_ctx()
+        mock_page.locator.return_value.first.is_visible.return_value = True
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator.send_screenshot_for_approval_sync") as mock_shot,
+            patch("agents.applicator.wait_for_approval", return_value=True),
+            patch("agents.applicator._fill_free_text_fields", return_value=0),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            apply(_JOB_A, "cv.pdf", dry_run=False, cv_text=_CV, job_description=_JD)
+        mock_shot.assert_called_once()
+
+    def test_hitl_si_returns_enviado_true(self):
+        from agents.applicator import apply
+        mock_pw_cm, _, mock_page = _mock_linkedin_ctx()
+        mock_page.locator.return_value.first.is_visible.return_value = True
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator.send_screenshot_for_approval_sync"),
+            patch("agents.applicator.wait_for_approval", return_value=True),
+            patch("agents.applicator._fill_free_text_fields", return_value=0),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False, cv_text=_CV, job_description=_JD)
+        assert result["enviado"] is True
+        assert result["canal"] == "A"
+
+    def test_hitl_no_returns_enviado_false(self):
+        from agents.applicator import apply
+        mock_pw_cm, _, mock_page = _mock_linkedin_ctx()
+        mock_page.locator.return_value.first.is_visible.return_value = True
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator.send_screenshot_for_approval_sync"),
+            patch("agents.applicator.wait_for_approval", return_value=False),
+            patch("agents.applicator._fill_free_text_fields", return_value=0),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = True
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False, cv_text=_CV, job_description=_JD)
+        assert result["enviado"] is False
+        assert "HITL" in result["mensaje"] or "cancel" in result["mensaje"].lower()
+
+    def test_hitl_disabled_no_screenshot_sent(self):
+        from agents.applicator import apply
+        mock_pw_cm, _, mock_page = _mock_linkedin_ctx()
+        mock_page.locator.return_value.first.is_visible.return_value = True
+        with (
+            patch("agents.applicator.sync_playwright", return_value=mock_pw_cm),
+            patch("agents.applicator.send_screenshot_for_approval_sync") as mock_shot,
+            patch("agents.applicator.wait_for_approval") as mock_wait,
+            patch("agents.applicator._fill_free_text_fields", return_value=0),
+            patch("agents.applicator.config") as mock_cfg,
+        ):
+            mock_cfg.HITL_ENABLED             = False
+            mock_cfg.HITL_TIMEOUT_S           = 300
+            mock_cfg.PLAYWRIGHT_USER_DATA_DIR = "browser_profile"
+            mock_cfg.APPLICANT_PHONE          = "+57 315 256 1884"
+            mock_cfg.APPLICANT_EMAIL          = "test@test.com"
+            result = apply(_JOB_A, "cv.pdf", dry_run=False, cv_text=_CV, job_description=_JD)
+        mock_shot.assert_not_called()
+        mock_wait.assert_not_called()
+        assert result["enviado"] is True

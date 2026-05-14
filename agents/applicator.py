@@ -38,6 +38,8 @@ try:
         send_cv_ready_email,
         send_cv_ready_browser,
         send_email_body,
+        send_screenshot_for_approval_sync,
+        wait_for_approval,
     )
 except ImportError:
     def send_cv_ready_email(jobs):  # noqa: E301
@@ -46,6 +48,10 @@ except ImportError:
         pass
     def send_email_body(job, body_text):  # noqa: E301
         pass
+    def send_screenshot_for_approval_sync(image_path, job):  # noqa: E301
+        pass
+    def wait_for_approval(timeout_s=300):  # noqa: E301
+        return True
 
 # Sitios de empleo → canal B (portal empresa, no LinkedIn)
 _WEB_JOB_SITES = (
@@ -95,7 +101,108 @@ def _screenshot_on_error(page, context: str) -> str | None:
 
 # ── Canal A: LinkedIn Easy Apply ──────────────────────────────────────────────
 
-def _apply_linkedin(job: dict, pdf_path: str) -> dict:
+def _get_field_question(page, field) -> str:
+    """
+    Extrae el texto de la pregunta asociada a un campo de formulario.
+    Prioridad: placeholder → aria-label → label en DOM → cadena vacía.
+    Nunca lanza excepción.
+    """
+    try:
+        ph = field.get_attribute("placeholder", timeout=1_000) or ""
+        if ph.strip():
+            return ph.strip()
+        aria = field.get_attribute("aria-label", timeout=1_000) or ""
+        if aria.strip():
+            return aria.strip()
+        # Intentar buscar un <label> asociado por el 'id' del campo
+        fid = field.get_attribute("id", timeout=1_000) or ""
+        if fid:
+            try:
+                label = page.locator(f"label[for='{fid}']").first
+                if label.is_visible(timeout=1_000):
+                    txt = label.text_content(timeout=1_000) or ""
+                    if txt.strip():
+                        return txt.strip()
+            except Exception:
+                pass
+        return ""
+    except Exception:
+        return ""
+
+
+def _generate_field_answer(question: str, cv_text: str, job_description: str) -> str:
+    """
+    Llama a Claude para generar una respuesta a un campo de texto libre.
+    Usa ÚNICAMENTE información del CV — no inventa hechos.
+    Máximo 150 caracteres.
+    Retorna cadena vacía si anthropic no está disponible.
+    """
+    if anthropic is None:
+        return ""
+
+    prompt = (
+        f"You are Lorena Ruiz. Answer this application form question in one or two sentences. "
+        f"Use ONLY facts from the CV. Do NOT invent metrics or experience.\n\n"
+        f"QUESTION: {question}\n\n"
+        f"CV (use this as your only source):\n{cv_text[:2000]}\n\n"
+        f"JOB DESCRIPTION (for context):\n{job_description[:1000]}\n\n"
+        f"Answer (max 150 characters, no quotes):"
+    )
+    try:
+        client   = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        response = client.messages.create(
+            model=config.MODEL_FAST,
+            max_tokens=80,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        answer = response.content[0].text.strip()
+        return answer[:150]
+    except Exception as e:
+        print(f"  [Applicator-A] _generate_field_answer error: {e}")
+        return ""
+
+
+def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
+    """
+    Detecta campos de texto libre visibles y vacíos en la página actual y
+    los llena con respuestas generadas por Claude.
+
+    Retorna el número de campos llenados.
+    Nunca lanza excepción — errores de Playwright se silencian.
+    Si anthropic no está disponible, retorna 0 sin tocar la página.
+    """
+    if anthropic is None:
+        return 0
+
+    filled = 0
+    try:
+        selector = "textarea, input[type='text']:not([name*='phone']):not([name*='email'])"
+        fields = page.locator(selector).all()
+        for field in fields:
+            try:
+                if not field.is_visible(timeout=1_000):
+                    continue
+                current_val = field.input_value() or field.text_content() or ""
+                if current_val.strip():
+                    continue  # campo ya tiene contenido — no tocar
+                question = _get_field_question(page, field)
+                if not question:
+                    continue  # sin pregunta identificable — saltar
+                answer = _generate_field_answer(question, cv_text, job_description)
+                if answer:
+                    field.fill(answer)
+                    _human_pause(0.3, 0.8)
+                    print(f"  [Applicator-A] Campo llenado: {question[:50]!r} → {answer[:50]!r}")
+                    filled += 1
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return filled
+
+
+def _apply_linkedin(job: dict, pdf_path: str,
+                    cv_text: str = "", job_description: str = "") -> dict:
     """
     Intenta LinkedIn Easy Apply con Playwright headful.
 
@@ -103,8 +210,10 @@ def _apply_linkedin(job: dict, pdf_path: str) -> dict:
       1. Abre navegador con perfil persistente (sesión guardada).
       2. Navega a la URL del cargo.
       3. Hace clic en Easy Apply.
-      4. Completa cada paso: contacto, CV upload, preguntas simples, review, submit.
-      5. Confirma el envío.
+      4. Completa cada paso: CV upload, campos simples, smart fill de texto libre.
+      5. En la página Review/Submit:
+           - HITL_ENABLED=True: screenshot → Telegram → espera SI/NO → submit o cancela.
+           - HITL_ENABLED=False: submit directo.
 
     Si cualquier paso falla o aparece un formulario inesperado, deja el
     navegador abierto 60s para que Lorena complete manualmente y devuelve
@@ -112,8 +221,8 @@ def _apply_linkedin(job: dict, pdf_path: str) -> dict:
     """
     from playwright.sync_api import TimeoutError as PwTimeout
 
-    url = job.get("url", "")
-    cargo = job.get("cargo", "")
+    url    = job.get("url", "")
+    cargo  = job.get("cargo", "")
     empresa = job.get("empresa", "")
 
     print(f"  [Applicator-A] Abriendo LinkedIn: {cargo} @ {empresa}")
@@ -211,24 +320,55 @@ def _apply_linkedin(job: dict, pdf_path: str) -> dict:
                 # b) Rellenar campos simples (teléfono, email)
                 _fill_simple_fields(page)
 
-                # c) Detectar si hay el botón Submit (último paso)
+                # c) Smart fill: campos de texto libre con Claude
+                _fill_free_text_fields(page, cv_text, job_description)
+
+                # d) Detectar si hay el botón Submit (último paso)
                 submit_btn = page.locator(
                     "button[aria-label='Submit application'], "
                     "button:has-text('Submit application')"
                 ).first
                 if submit_btn.is_visible(timeout=2_000):
                     _human_pause(0.5, 1.0)
-                    submit_btn.click()
-                    _human_pause(2.0, 3.0)
-                    print("  [Applicator-A] Aplicación enviada.")
-                    _screenshot_on_error(page, "submitted")
-                    ctx.close()
-                    return {
-                        "enviado": True, "canal": "A", "url": url,
-                        "mensaje": f"Easy Apply enviado: {cargo} @ {empresa}",
-                    }
 
-                # d) Buscar botón Next / Review
+                    if config.HITL_ENABLED:
+                        # HITL: screenshot → Telegram → esperar SI/NO
+                        shot_path = _screenshot_on_error(page, "review")
+                        send_screenshot_for_approval_sync(shot_path or "", job)
+                        approved = wait_for_approval(config.HITL_TIMEOUT_S)
+                        if approved:
+                            submit_btn.click()
+                            _human_pause(2.0, 3.0)
+                            print("  [Applicator-A] Aplicación enviada (HITL aprobado).")
+                            ctx.close()
+                            return {
+                                "enviado": True, "canal": "A", "url": url,
+                                "mensaje": f"Easy Apply enviado: {cargo} @ {empresa}",
+                            }
+                        else:
+                            print("  [Applicator-A] HITL cancelado — browser abierto para completar manualmente.")
+                            try:
+                                page.wait_for_event("close", timeout=config.HITL_TIMEOUT_S * 1_000)
+                            except Exception:
+                                pass
+                            ctx.close()
+                            return {
+                                "enviado": False, "canal": "A", "url": url,
+                                "mensaje": "HITL cancelado — completar manualmente",
+                            }
+                    else:
+                        # Sin HITL: submit directo
+                        submit_btn.click()
+                        _human_pause(2.0, 3.0)
+                        print("  [Applicator-A] Aplicación enviada (sin HITL).")
+                        _screenshot_on_error(page, "submitted")
+                        ctx.close()
+                        return {
+                            "enviado": True, "canal": "A", "url": url,
+                            "mensaje": f"Easy Apply enviado: {cargo} @ {empresa}",
+                        }
+
+                # e) Buscar botón Next / Review
                 next_btn = _find_next_button(page)
                 if next_btn is None:
                     # Formulario con preguntas no esperadas — dejar abierto
@@ -659,7 +799,7 @@ def apply(job: dict, pdf_path: str, dry_run: bool = False,
         }
 
     if canal == "A":
-        return _apply_linkedin(job, pdf_path)
+        return _apply_linkedin(job, pdf_path, cv_text=cv_text, job_description=job_description)
     elif canal == "B":
         return _apply_web(job, pdf_path)
     else:

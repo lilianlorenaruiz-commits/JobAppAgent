@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -169,6 +170,69 @@ def send_screenshot_for_approval(image_path: str, job: dict) -> None:
     )
     asyncio.run(_send_photo_async(token, chat_id, image_path, caption))
     print(f"[HITL] Screenshot enviado — esperando respuesta para {cargo} @ {empresa}")
+
+
+def send_screenshot_for_approval_sync(image_path: str, job: dict) -> None:
+    """
+    Versión sync de send_screenshot_for_approval — usa urllib.request (sin asyncio).
+    Seguro para llamar desde dentro del context manager de Playwright sync API.
+
+    Envía sendPhoto si image_path existe, sendMessage si no.
+    Nunca propaga excepciones — errores se silencian con print.
+    """
+    try:
+        token, chat_id = _require_telegram()
+        cargo       = job.get("cargo", "")
+        empresa     = job.get("empresa", "")
+        timeout_min = getattr(config, "HITL_TIMEOUT_S", 300) // 60
+        caption = (
+            f"⚠️ REVISAR ANTES DE ENVIAR\n\n"
+            f"Cargo: {cargo}\n"
+            f"Empresa: {empresa}\n\n"
+            f"Responde SI para confirmar el envio\n"
+            f"Responde NO para cancelar\n"
+            f"Tienes {timeout_min} minutos"
+        )
+        base_url = f"https://api.telegram.org/bot{token}"
+
+        if image_path and os.path.exists(image_path):
+            # Enviar foto con multipart/form-data
+            boundary = b"----JobAppAgentBoundary"
+            with open(image_path, "rb") as img_file:
+                img_data = img_file.read()
+            body = (
+                b"--" + boundary + b"\r\n"
+                b'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
+                + chat_id.encode() + b"\r\n"
+                + b"--" + boundary + b"\r\n"
+                b'Content-Disposition: form-data; name="caption"\r\n\r\n'
+                + caption.encode("utf-8") + b"\r\n"
+                + b"--" + boundary + b"\r\n"
+                b'Content-Disposition: form-data; name="photo"; filename="screenshot.png"\r\n'
+                b"Content-Type: image/png\r\n\r\n"
+                + img_data + b"\r\n"
+                + b"--" + boundary + b"--\r\n"
+            )
+            req = urllib.request.Request(
+                f"{base_url}/sendPhoto",
+                data=body,
+                headers={"Content-Type": f"multipart/form-data; boundary={boundary.decode()}"},
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+        else:
+            # Sin imagen — enviar solo texto
+            data = urllib.parse.urlencode({
+                "chat_id": chat_id,
+                "text":    caption,
+            }).encode()
+            req = urllib.request.Request(f"{base_url}/sendMessage", data=data)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                resp.read()
+
+        print(f"[HITL] Screenshot sync enviado para {cargo} @ {empresa}")
+    except Exception as e:
+        print(f"[HITL] send_screenshot_for_approval_sync error: {e}")
 
 
 # ── Polling HITL ───────────────────────────────────────────────────────────────

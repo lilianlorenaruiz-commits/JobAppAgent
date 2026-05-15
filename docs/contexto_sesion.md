@@ -7,7 +7,7 @@
 
 ## Estado actual del proyecto
 
-**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 186/186 tests GREEN**
+**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 204/204 tests GREEN**
 
 | Canal | Estado | Smoke test |
 |---|---|---|
@@ -80,12 +80,12 @@ Si ya fue aplicado → retorna `enviado=True` sin reenviar.
 ## Test Suite — 186 tests
 
 ```bash
-python -m pytest -q    # → 186 passed
+python -m pytest -q    # → 204 passed
 ```
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `test_applicator_canal_a.py` | 28 | Canal A completo + edge cases + asyncio |
+| `test_applicator_canal_a.py` | 46 | Canal A + smart fill + candidate_profile |
 | `test_applicator_canal_b.py` | 11 | Canal B |
 | `test_applicator_controlled.py` | 29 | Pre-producción checklist |
 | `test_applicator_v2.py` | 12 | Canal C email body |
@@ -111,27 +111,34 @@ python -m pytest -q    # → 186 passed
 
 ---
 
-## Próxima mejora planeada: candidate_profile.json
+## candidate_profile.json — IMPLEMENTADO (Ciclo 27)
 
-Repositorio de respuestas estructuradas de Lorena para preguntas recurrentes en formularios Easy Apply:
+Repositorio de respuestas estables de Lorena en `config/candidate_profile.json`:
 
 ```json
 {
-  "salary_expectation":  "8000000",
-  "currency":            "COP",
-  "city":                "Bogotá D.C.",
-  "lives_in_bogota":     "Sí",
-  "willing_to_relocate": "No",
-  "willing_to_travel":   "Sí",
-  "years_experience":    "14",
-  "work_authorization":  "Sí",
-  "english_level":       "C2",
-  "availability":        "Inmediata"
+  "salary_text":               "6.500.000 COP / 2.300 USD mensuales",
+  "city":                      "Bogotá D.C., Colombia",
+  "willing_to_travel":         "Sí",
+  "willing_to_relocate":       "No",
+  "availability":              "Inmediata",
+  "has_vehicle":               "Sí",
+  "background_check":          "Sí",
+  "english_level":             "C2 - Proficiencia completa",
+  "requires_visa_sponsorship": "No",
+  "work_authorization":        "Sí",
+  "night_shifts":              "No, disponible lunes a viernes en horario regular",
+  "hybrid_available":          "Sí",
+  "years_experience":          "14"
 }
 ```
 
-Flujo: `_match_profile_question(question)` por keywords → perfil → si no match → Claude Haiku.
-Esto resuelve: campos numéricos (salario), dropdowns sí/no, y preguntas repetidas entre postulaciones.
+Flujo implementado: `_match_profile_question(question, profile)` por keywords → si match → retorna respuesta del perfil (sin llamar a Claude). Si no match → Claude como fallback.
+
+Funciones añadidas a `agents/applicator.py`:
+- `_load_candidate_profile() -> dict` — carga el JSON desde config/
+- `_PROFILE_KEYWORD_RULES` — 14 reglas keyword → clave de perfil
+- `_match_profile_question(question, profile) -> str` — match case-insensitive
 
 ---
 

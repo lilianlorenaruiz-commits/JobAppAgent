@@ -293,6 +293,71 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
     return filled
 
 
+def _extract_linkedin_job_info(page) -> dict:
+    """
+    Lee cargo, empresa y descripción de la página LinkedIn actual.
+    Usa múltiples selectores con fallback — LinkedIn cambia su HTML frecuentemente.
+    Nunca lanza excepción. Retorna dict con cadenas vacías si falla.
+    """
+    info = {"cargo": "", "empresa": "", "descripcion": ""}
+    try:
+        # Cargo: h1 del panel de detalle (LinkedIn usa distintas clases según versión)
+        for sel in [
+            "h1.t-24",
+            "h1.jobs-unified-top-card__job-title",
+            ".job-details-jobs-unified-top-card__job-title h1",
+            "h1",
+        ]:
+            try:
+                el = page.locator(sel).first
+                if el.is_visible(timeout=2_000):
+                    txt = (el.text_content(timeout=2_000) or "").strip()
+                    if txt:
+                        info["cargo"] = txt
+                        break
+            except Exception:
+                continue
+
+        # Empresa
+        for sel in [
+            ".job-details-jobs-unified-top-card__company-name a",
+            ".jobs-unified-top-card__company-name a",
+            ".topcard__org-name-link",
+            ".jobs-unified-top-card__company-name",
+        ]:
+            try:
+                el = page.locator(sel).first
+                if el.is_visible(timeout=2_000):
+                    txt = (el.text_content(timeout=2_000) or "").strip()
+                    if txt:
+                        info["empresa"] = txt
+                        break
+            except Exception:
+                continue
+
+        # Descripción (cuerpo completo de la oferta)
+        for sel in [
+            ".jobs-description__content .jobs-box__html-content",
+            ".jobs-description__content",
+            ".jobs-box__html-content",
+            ".jobs-description",
+        ]:
+            try:
+                el = page.locator(sel).first
+                if el.is_visible(timeout=2_000):
+                    txt = (el.text_content(timeout=3_000) or "").strip()
+                    if txt:
+                        info["descripcion"] = txt[:3000]
+                        break
+            except Exception:
+                continue
+
+    except Exception:
+        pass
+
+    return info
+
+
 def _linkedin_playwright_loop(job: dict, pdf_path: str,
                               cv_text: str, job_description: str):
     """
@@ -331,6 +396,20 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
             except Exception:
                 pass  # timeout en networkidle no es fatal
             _human_pause(1.0, 2.0)
+
+            # ── 1b. Extraer info del cargo de la página ──────────────────────
+            # Lee cargo, empresa y descripción desde el HTML de LinkedIn.
+            # Enriquece job_description si llegó vacío (ej: desde smoke test).
+            _job_info = _extract_linkedin_job_info(page)
+            if _job_info["cargo"] and not cargo:
+                cargo = _job_info["cargo"]
+                print(f"  [Applicator-A] Cargo extraído: {cargo!r}")
+            if _job_info["empresa"] and not empresa:
+                empresa = _job_info["empresa"]
+                print(f"  [Applicator-A] Empresa extraída: {empresa!r}")
+            if _job_info["descripcion"] and not job_description:
+                job_description = _job_info["descripcion"]
+                print(f"  [Applicator-A] JD extraída: {len(job_description)} chars")
 
             # ── 2. Verificar que la página cargó (no es login wall) ─────────
             if "linkedin.com/login" in page.url or "authwall" in page.url:

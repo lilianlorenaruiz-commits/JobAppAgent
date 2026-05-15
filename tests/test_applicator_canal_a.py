@@ -687,3 +687,81 @@ class TestGenerateFieldAnswerWithProfile:
         with patch("agents.applicator._load_candidate_profile", return_value=long_profile):
             result = _generate_field_answer("¿Cuál es tu aspiración salarial?", _CV, _JD)
         assert len(result) <= 150
+
+
+# ── Ciclo 29: _extract_linkedin_job_info ──────────────────────────────────────
+
+class TestExtractLinkedinJobInfo:
+    """_extract_linkedin_job_info lee cargo, empresa y descripción de la página."""
+
+    def _mock_page_with_content(self, cargo="Product Manager",
+                                 empresa="Falabella", desc="Descripción del cargo."):
+        page = MagicMock()
+
+        def _locator_side_effect(selector, **kwargs):
+            loc = MagicMock()
+            loc.first.is_visible.return_value = True
+            if "h1" in selector:
+                loc.first.text_content.return_value = cargo
+            elif "company" in selector or "org-name" in selector:
+                loc.first.text_content.return_value = empresa
+            elif "description" in selector or "box__html" in selector:
+                loc.first.text_content.return_value = desc
+            else:
+                loc.first.is_visible.return_value = False
+                loc.first.text_content.return_value = ""
+            return loc
+
+        page.locator.side_effect = _locator_side_effect
+        return page
+
+    def test_returns_dict_with_three_keys(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = self._mock_page_with_content()
+        result = _extract_linkedin_job_info(page)
+        assert "cargo" in result
+        assert "empresa" in result
+        assert "descripcion" in result
+
+    def test_extracts_cargo_from_h1(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = self._mock_page_with_content(cargo="Media Planning Manager")
+        result = _extract_linkedin_job_info(page)
+        assert result["cargo"] == "Media Planning Manager"
+
+    def test_extracts_empresa(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = self._mock_page_with_content(empresa="OMD Colombia")
+        result = _extract_linkedin_job_info(page)
+        assert result["empresa"] == "OMD Colombia"
+
+    def test_extracts_descripcion(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = self._mock_page_with_content(desc="Requisitos: Google Ads, Meta Ads.")
+        result = _extract_linkedin_job_info(page)
+        assert "Google Ads" in result["descripcion"]
+
+    def test_descripcion_truncated_at_3000_chars(self):
+        from agents.applicator import _extract_linkedin_job_info
+        long_desc = "X" * 5000
+        page = self._mock_page_with_content(desc=long_desc)
+        result = _extract_linkedin_job_info(page)
+        assert len(result["descripcion"]) <= 3000
+
+    def test_does_not_raise_when_page_throws(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = MagicMock()
+        page.locator.side_effect = Exception("Playwright error")
+        result = _extract_linkedin_job_info(page)
+        assert result == {"cargo": "", "empresa": "", "descripcion": ""}
+
+    def test_returns_empty_strings_when_elements_not_visible(self):
+        from agents.applicator import _extract_linkedin_job_info
+        page = MagicMock()
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        result = _extract_linkedin_job_info(page)
+        assert result["cargo"] == ""
+        assert result["empresa"] == ""
+        assert result["descripcion"] == ""

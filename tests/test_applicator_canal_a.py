@@ -737,7 +737,10 @@ class TestExtractLinkedinJobInfo:
 
     def test_extracts_descripcion(self):
         from agents.applicator import _extract_linkedin_job_info
-        page = self._mock_page_with_content(desc="Requisitos: Google Ads, Meta Ads.")
+        # La descripción debe tener >100 chars para superar el filtro de ruido
+        long_desc = "Requisitos: Google Ads, Meta Ads, LinkedIn Ads. Experiencia mínima 3 años en paid media. " \
+                    "Gestión de presupuesto digital. Conocimiento en analytics y reporting avanzado."
+        page = self._mock_page_with_content(desc=long_desc)
         result = _extract_linkedin_job_info(page)
         assert "Google Ads" in result["descripcion"]
 
@@ -765,6 +768,47 @@ class TestExtractLinkedinJobInfo:
         assert result["cargo"] == ""
         assert result["empresa"] == ""
         assert result["descripcion"] == ""
+
+    def test_extracts_descripcion_via_javascript_when_css_fails(self):
+        """page.evaluate() extrae descripción cuando los selectores CSS no matchean.
+
+        Ciclo 35: LinkedIn cambia sus clases CSS frecuentemente. La extracción
+        via JS es más robusta porque busca múltiples contenedores en el mismo call.
+        """
+        from agents.applicator import _extract_linkedin_job_info
+        _long_desc = "Buscamos Product Manager con experiencia en metodologías ágiles y gestión de producto. " * 3
+        page = MagicMock()
+        page.title.return_value = "Product Manager | Falabella | LinkedIn"
+        # CSS selectors: todos fallan (is_visible=False)
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        # page.evaluate() retorna descripción larga (JS evaluation exitosa)
+        page.evaluate.return_value = _long_desc
+
+        result = _extract_linkedin_job_info(page)
+        assert len(result["descripcion"]) > 100, "descripcion debe extraerse via JS cuando CSS falla"
+        assert "Product Manager" in result["descripcion"]
+
+    def test_extracts_descripcion_via_json_ld_when_js_fails(self):
+        """JSON-LD es el segundo fallback cuando JS evaluation retorna texto corto.
+
+        Ciclo 35: LinkedIn incluye datos estructurados (application/ld+json) para SEO.
+        La descripción está en data.description o data['@graph'][*].description.
+        """
+        from agents.applicator import _extract_linkedin_job_info
+        _long_desc = "Responsabilidades: definir roadmap de producto, coordinar con ingeniería y diseño. " * 3
+        page = MagicMock()
+        page.title.return_value = "Product Manager | Falabella | LinkedIn"
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        # Primer call (JS evaluation) falla con texto corto; segundo (JSON-LD) tiene desc
+        page.evaluate.side_effect = ["", _long_desc]
+
+        result = _extract_linkedin_job_info(page)
+        assert len(result["descripcion"]) > 100, "descripcion debe extraerse via JSON-LD cuando JS falla"
+        assert "roadmap" in result["descripcion"]
 
 
 # ── Ciclo 30: _parse_title_for_job_info + extracción robusta ─────────────────

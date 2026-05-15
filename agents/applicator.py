@@ -380,22 +380,82 @@ def _extract_linkedin_job_info(page) -> dict:
                 except Exception:
                     continue
 
-        # 4. Descripción (solo por DOM — no está en el título)
-        for sel in [
-            ".jobs-description__content .jobs-box__html-content",
-            ".jobs-description__content",
-            ".jobs-box__html-content",
-            ".jobs-description",
-        ]:
+        # 4. Descripción — estrategia multicapa (selectores CSS de LinkedIn cambian frecuentemente)
+        # 4a. JavaScript evaluation — más robusto que selectores CSS
+        if not info["descripcion"]:
             try:
-                el = page.locator(sel).first
-                if el.is_visible(timeout=2_000):
-                    txt = (el.text_content(timeout=3_000) or "").strip()
-                    if txt:
-                        info["descripcion"] = txt[:3000]
-                        break
+                desc = page.evaluate("""
+                    () => {
+                        const candidates = [
+                            document.querySelector('#job-details'),
+                            document.querySelector('.jobs-description__content'),
+                            document.querySelector('.jobs-box__html-content'),
+                            document.querySelector('.jobs-description-content__text'),
+                            document.querySelector('article.jobs-description__container'),
+                            document.querySelector('.description__text'),
+                            document.querySelector('[data-test-id="job-description"]'),
+                            document.querySelector('.jobs-description'),
+                        ];
+                        for (const el of candidates) {
+                            if (el && el.innerText && el.innerText.trim().length > 100) {
+                                return el.innerText.trim();
+                            }
+                        }
+                        return '';
+                    }
+                """)
+                if desc and len(desc.strip()) > 100:
+                    info["descripcion"] = desc.strip()[:3000]
             except Exception:
-                continue
+                pass
+
+        # 4b. JSON-LD — LinkedIn incluye datos estructurados para SEO
+        if not info["descripcion"]:
+            try:
+                ld_desc = page.evaluate("""
+                    () => {
+                        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+                        for (const s of scripts) {
+                            try {
+                                const data = JSON.parse(s.textContent);
+                                if (data.description) return data.description;
+                                if (data['@graph']) {
+                                    for (const item of data['@graph']) {
+                                        if (item.description) return item.description;
+                                    }
+                                }
+                            } catch(e) {}
+                        }
+                        return '';
+                    }
+                """)
+                if ld_desc and len(ld_desc.strip()) > 100:
+                    import html as _html
+                    cleaned = _html.unescape(ld_desc).strip()
+                    info["descripcion"] = cleaned[:3000]
+            except Exception:
+                pass
+
+        # 4c. Selectores CSS extendidos como último fallback
+        if not info["descripcion"]:
+            for sel in [
+                "#job-details",
+                ".jobs-description__content .jobs-box__html-content",
+                ".jobs-description-content__text--stretch",
+                ".jobs-description__content",
+                ".jobs-box__html-content",
+                ".jobs-description",
+                "article.jobs-description__container",
+            ]:
+                try:
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2_000):
+                        txt = (el.text_content(timeout=3_000) or "").strip()
+                        if len(txt) > 100:
+                            info["descripcion"] = txt[:3000]
+                            break
+                except Exception:
+                    continue
 
     except Exception:
         pass

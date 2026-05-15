@@ -765,3 +765,56 @@ class TestExtractLinkedinJobInfo:
         assert result["cargo"] == ""
         assert result["empresa"] == ""
         assert result["descripcion"] == ""
+
+
+# ── Ciclo 30: _parse_title_for_job_info + extracción robusta ─────────────────
+
+class TestParseTitleForJobInfo:
+    """page.title() es más estable que selectores CSS en LinkedIn."""
+
+    def test_standard_english_format(self):
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("Product Manager at Falabella | LinkedIn")
+        assert result["cargo"] == "Product Manager"
+        assert result["empresa"] == "Falabella"
+
+    def test_with_notification_prefix(self):
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("(3) Product Manager at Falabella | LinkedIn")
+        assert result["cargo"] == "Product Manager"
+        assert result["empresa"] == "Falabella"
+
+    def test_spanish_en_format(self):
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("Gerente de Marketing en Falabella | LinkedIn")
+        assert result["cargo"] == "Gerente de Marketing"
+        assert result["empresa"] == "Falabella"
+
+    def test_returns_empty_when_no_separator(self):
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("LinkedIn")
+        assert result == {"cargo": "", "empresa": ""}
+
+    def test_returns_empty_for_empty_string(self):
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("")
+        assert result == {"cargo": "", "empresa": ""}
+
+    def test_page_title_used_in_extract(self):
+        """_extract_linkedin_job_info llama page.title() y lo parsea."""
+        from agents.applicator import _extract_linkedin_job_info
+        page = MagicMock()
+        page.title.return_value = "Paid Media Manager at OMD Colombia | LinkedIn"
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        result = _extract_linkedin_job_info(page)
+        assert result["cargo"] == "Paid Media Manager"
+        assert result["empresa"] == "OMD Colombia"
+
+    def test_placeholder_cargo_is_detectable(self):
+        """'Cargo LinkedIn' debe detectarse como placeholder."""
+        from agents.applicator import _PLACEHOLDER_VALUES
+        assert "cargo linkedin" in _PLACEHOLDER_VALUES
+        assert "empresa linkedin" in _PLACEHOLDER_VALUES
+        assert "product manager" not in _PLACEHOLDER_VALUES

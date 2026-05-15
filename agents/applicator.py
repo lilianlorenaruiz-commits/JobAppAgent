@@ -293,49 +293,89 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
     return filled
 
 
+# Valores de cargo/empresa que indican que no se extrajo info real del JD
+_PLACEHOLDER_VALUES = {"cargo linkedin", "empresa linkedin", ""}
+
+
+def _parse_title_for_job_info(title: str) -> dict:
+    """
+    Extrae cargo y empresa del título del tab de LinkedIn.
+    Formatos soportados:
+      "Product Manager at Falabella | LinkedIn"
+      "(3) Product Manager at Falabella | LinkedIn"
+      "Gerente de Marketing en Falabella | LinkedIn"
+    Retorna {"cargo": "", "empresa": ""} si el formato no coincide.
+    """
+    if not title:
+        return {"cargo": "", "empresa": ""}
+    # Remover prefijo de notificación "(N) "
+    title = re.sub(r"^\(\d+\)\s*", "", title)
+    # Remover sufijo " | LinkedIn"
+    if " | LinkedIn" in title:
+        title = title[: title.index(" | LinkedIn")]
+    # Separar por " at " (inglés) o " en " (español)
+    for sep in [" at ", " en "]:
+        if sep in title:
+            parts = title.split(sep, 1)
+            return {"cargo": parts[0].strip(), "empresa": parts[1].strip()}
+    return {"cargo": "", "empresa": ""}
+
+
 def _extract_linkedin_job_info(page) -> dict:
     """
     Lee cargo, empresa y descripción de la página LinkedIn actual.
-    Usa múltiples selectores con fallback — LinkedIn cambia su HTML frecuentemente.
+    Estrategia: page.title() primero (estable) → selectores DOM como fallback.
     Nunca lanza excepción. Retorna dict con cadenas vacías si falla.
     """
     info = {"cargo": "", "empresa": "", "descripcion": ""}
     try:
-        # Cargo: h1 del panel de detalle (LinkedIn usa distintas clases según versión)
-        for sel in [
-            "h1.t-24",
-            "h1.jobs-unified-top-card__job-title",
-            ".job-details-jobs-unified-top-card__job-title h1",
-            "h1",
-        ]:
-            try:
-                el = page.locator(sel).first
-                if el.is_visible(timeout=2_000):
-                    txt = (el.text_content(timeout=2_000) or "").strip()
-                    if txt:
-                        info["cargo"] = txt
-                        break
-            except Exception:
-                continue
+        # 1. Título del tab — más estable que selectores CSS
+        try:
+            title_info = _parse_title_for_job_info(page.title() or "")
+            if title_info["cargo"]:
+                info["cargo"] = title_info["cargo"]
+            if title_info["empresa"]:
+                info["empresa"] = title_info["empresa"]
+        except Exception:
+            pass
 
-        # Empresa
-        for sel in [
-            ".job-details-jobs-unified-top-card__company-name a",
-            ".jobs-unified-top-card__company-name a",
-            ".topcard__org-name-link",
-            ".jobs-unified-top-card__company-name",
-        ]:
-            try:
-                el = page.locator(sel).first
-                if el.is_visible(timeout=2_000):
-                    txt = (el.text_content(timeout=2_000) or "").strip()
-                    if txt:
-                        info["empresa"] = txt
-                        break
-            except Exception:
-                continue
+        # 2. Fallback DOM para cargo (si title no lo dio)
+        if not info["cargo"]:
+            for sel in [
+                "h1.t-24",
+                "h1.jobs-unified-top-card__job-title",
+                ".job-details-jobs-unified-top-card__job-title h1",
+                "h1",
+            ]:
+                try:
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2_000):
+                        txt = (el.text_content(timeout=2_000) or "").strip()
+                        if txt:
+                            info["cargo"] = txt
+                            break
+                except Exception:
+                    continue
 
-        # Descripción (cuerpo completo de la oferta)
+        # 3. Fallback DOM para empresa (si title no lo dio)
+        if not info["empresa"]:
+            for sel in [
+                ".job-details-jobs-unified-top-card__company-name a",
+                ".jobs-unified-top-card__company-name a",
+                ".topcard__org-name-link",
+                ".jobs-unified-top-card__company-name",
+            ]:
+                try:
+                    el = page.locator(sel).first
+                    if el.is_visible(timeout=2_000):
+                        txt = (el.text_content(timeout=2_000) or "").strip()
+                        if txt:
+                            info["empresa"] = txt
+                            break
+                except Exception:
+                    continue
+
+        # 4. Descripción (solo por DOM — no está en el título)
         for sel in [
             ".jobs-description__content .jobs-box__html-content",
             ".jobs-description__content",
@@ -401,10 +441,10 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
             # Lee cargo, empresa y descripción desde el HTML de LinkedIn.
             # Enriquece job_description si llegó vacío (ej: desde smoke test).
             _job_info = _extract_linkedin_job_info(page)
-            if _job_info["cargo"] and not cargo:
+            if _job_info["cargo"] and cargo.lower() in _PLACEHOLDER_VALUES:
                 cargo = _job_info["cargo"]
                 print(f"  [Applicator-A] Cargo extraído: {cargo!r}")
-            if _job_info["empresa"] and not empresa:
+            if _job_info["empresa"] and empresa.lower() in _PLACEHOLDER_VALUES:
                 empresa = _job_info["empresa"]
                 print(f"  [Applicator-A] Empresa extraída: {empresa!r}")
             if _job_info["descripcion"] and not job_description:

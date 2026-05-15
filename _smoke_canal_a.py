@@ -74,7 +74,8 @@ def _scrape_job_from_url(url: str) -> dict:
             print(f"  [Scrape] JD:      {len(job['descripcion'])} chars extraídos")
             ctx.close()
     except Exception as e:
-        print(f"  [Scrape] Error al extraer info: {e} — usando placeholders")
+        safe_msg = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"  [Scrape] Error al extraer info: {safe_msg} — usando placeholders")
     return job
 
 

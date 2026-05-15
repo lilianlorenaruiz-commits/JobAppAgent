@@ -1,99 +1,163 @@
 """
-Smoke test Nivel 3 — Canal A real.
-Ejecuta apply() sin dry_run con una oferta de LinkedIn controlada.
+Smoke test Nivel 3 — Canal A real con pipeline completo.
 
-Verifica:
-  1. Browser headful abre LinkedIn con sesión persistente
-  2. El agente hace clic en Easy Apply
-  3. Por cada paso del modal: sube CV, llena contacto, smart fill con Claude
-  4. En la página Review: envía screenshot a Lorena por Telegram
-  5. Lorena responde SI o NO en Telegram
-  6. SI → submit / NO → browser queda abierto para completar manualmente
+Flujo:
+  1. Extraer cargo, empresa y descripción de la URL de LinkedIn (Playwright breve)
+  2. Reescribir CV adaptado a ese cargo (Claude API — puede tardar 2-4 min)
+  3. Generar PDF del CV reescrito
+  4. Aplicar via Easy Apply (Playwright + HITL Telegram)
 
 Uso:
   python _smoke_canal_a.py
 """
 import os
 import sys
-import glob
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config
-from agents.applicator import apply
+from agents.cv_parser import parse_cv
+from agents.cv_rewriter import rewrite
+from agents.pdf_generator import generate
+from agents.applicator import apply, _extract_linkedin_job_info
 
-# ── Job de prueba — LinkedIn Easy Apply (Canal A) ──────────────────────────────
-# NOTA: Si el cargo ya tiene "Solicitud enviada", el agente lo detecta y retorna
-# enviado=True directamente. Para probar el flujo completo usa una oferta sin aplicar.
-# Reemplaza la URL con una oferta real de LinkedIn que tenga Easy Apply:
-TEST_JOB = {
-    "cargo":     "Media Planning Manager",
-    "empresa":   "OMD Colombia",
-    "url":       "https://www.linkedin.com/jobs/view/4405866108/",
-    "modalidad": "Híbrido",
-    "ubicacion": "Bogotá D.C.",
-    "rama":      "A",
-    "score":     88,
-}
+# ── URL de prueba — reemplazar con oferta real de LinkedIn Easy Apply ───────
+TEST_URL  = "https://www.linkedin.com/jobs/view/4407519233/"
+TEST_RAMA = "C"   # A=Consultoría  B=Retail  C=Paid Media
 
-# ── CV disponible ──────────────────────────────────────────────────────────────
-PDF_PATH = os.path.join(config.OUTPUT_DIR, "Lorena Ruiz - Paid Media Manager - Rappi.pdf")
-if not os.path.exists(PDF_PATH):
-    pdfs = glob.glob(os.path.join(config.OUTPUT_DIR, "*.pdf"))
-    PDF_PATH = pdfs[0] if pdfs else "cv_prueba.pdf"
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── CV en texto plano (para smart fill) ───────────────────────────────────────
-CV_TEXT = (
-    "Lorena Ruiz — Paid Media Specialist / AM LinkedIn Ads. "
-    "14 años en marketing digital. Meta Ads, Google Ads, Amazon Ads, LinkedIn Ads. "
-    "Presupuestos USD 240K mensuales. 300 cuentas B2B enterprise en LinkedIn. "
-    "Bogotá D.C. | lilian@lorena-ruiz.com | +57 315 256 1884"
-)
+def _scrape_job_from_url(url: str) -> dict:
+    """
+    Abre la URL en el browser con sesión persistente, extrae cargo/empresa/JD,
+    cierra el browser y retorna un dict de job.
+    Sesión breve — el profile lock se libera antes de llamar apply().
+    """
+    from playwright.sync_api import sync_playwright
+    job = {"url": url, "cargo": "", "empresa": "", "descripcion": "",
+           "modalidad": "Híbrido", "ubicacion": "Bogotá D.C.", "rama": TEST_RAMA, "score": 90}
+    try:
+        with sync_playwright() as p:
+            ctx = p.chromium.launch_persistent_context(
+                config.PLAYWRIGHT_USER_DATA_DIR,
+                headless=False,
+                slow_mo=300,
+                viewport={"width": 1280, "height": 800},
+            )
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            print(f"  [Scrape] Navegando a {url}")
+            page.goto(url, timeout=30_000, wait_until="domcontentloaded")
+            try:
+                page.wait_for_load_state("networkidle", timeout=10_000)
+            except Exception:
+                pass
+            time.sleep(3)  # render completo de componentes LinkedIn
 
-# ── Job description de prueba ─────────────────────────────────────────────────
-JD_TEXT = (
-    "We are looking for a Paid Media Manager with experience in Meta Ads, "
-    "Google Ads, and LinkedIn Ads. Budget management of USD 50K+ monthly required."
-)
+            info = _extract_linkedin_job_info(page)
+            job["cargo"]       = info["cargo"]       or "Cargo LinkedIn"
+            job["empresa"]     = info["empresa"]      or "Empresa LinkedIn"
+            job["descripcion"] = info["descripcion"]  or ""
 
-print("=" * 60)
-print("SMOKE TEST — CANAL A (real, sin dry_run)")
-print("=" * 60)
-print(f"Cargo:   {TEST_JOB['cargo']}")
-print(f"Empresa: {TEST_JOB['empresa']}")
-print(f"URL:     {TEST_JOB['url']}")
-print(f"PDF:     {os.path.basename(PDF_PATH)}")
-print(f"HITL:    {'ACTIVADO' if config.HITL_ENABLED else 'DESACTIVADO'}")
-print(f"Timeout: {config.HITL_TIMEOUT_S // 60} minutos")
-print()
-print("ANTES DE CONTINUAR:")
-print("  1. Asegúrate de haber corrido python _setup_browser.py (sesión LinkedIn)")
-print("  2. Reemplaza la URL del TEST_JOB con una oferta real de LinkedIn")
-print("     que tenga botón 'Easy Apply'")
-print("  3. Si HITL está activo, Telegram recibirá un screenshot para aprobar")
-print()
+            print(f"  [Scrape] Cargo:   {job['cargo']}")
+            print(f"  [Scrape] Empresa: {job['empresa']}")
+            print(f"  [Scrape] JD:      {len(job['descripcion'])} chars extraídos")
+            ctx.close()
+    except Exception as e:
+        print(f"  [Scrape] Error al extraer info: {e} — usando placeholders")
+    return job
 
-print()
 
-result = apply(TEST_JOB, PDF_PATH, dry_run=False,
-               cv_text=CV_TEXT, job_description=JD_TEXT)
+def main():
+    print("=" * 60)
+    print("SMOKE TEST — CANAL A (pipeline completo)")
+    print("=" * 60)
+    print(f"URL:    {TEST_URL}")
+    print(f"Rama:   {TEST_RAMA}")
+    print(f"HITL:   {'ACTIVADO (' + str(config.HITL_TIMEOUT_S // 60) + ' min)' if config.HITL_ENABLED else 'DESACTIVADO'}")
+    print()
 
-print()
-print("=" * 60)
-print("RESULTADO:")
-print(f"  Canal:   {result['canal']}")
-print(f"  Enviado: {result['enviado']}")
-print(f"  Mensaje: {result['mensaje']}")
-print("=" * 60)
-print()
-print("Verifica ahora:")
-print("  [ ] ¿Se abrió el browser en la URL de LinkedIn?")
-print("  [ ] ¿El agente hizo clic en Easy Apply?")
-print("  [ ] ¿Se llenaron los campos de contacto (teléfono, email)?")
-print("  [ ] ¿Claude llenó campos de texto libre del formulario?")
-if config.HITL_ENABLED:
-    print("  [ ] ¿Telegram recibió screenshot de la página Review?")
-    print("  [ ] ¿Lorena respondió SI/NO y el resultado es correcto?")
-else:
-    print("  [ ] (HITL desactivado) ¿Se hizo submit automático?")
-print()
-print("Si todo OK -> Canal A aprobado OK")
+    # ── 1. Extraer info del cargo ─────────────────────────────────────────────
+    print("PASO 1 — Extrayendo info del cargo desde LinkedIn...")
+    job = _scrape_job_from_url(TEST_URL)
+    print()
+
+    # ── 2. Leer CV base ───────────────────────────────────────────────────────
+    print("PASO 2 — Leyendo CV base desde PDF...")
+    try:
+        cv = parse_cv()
+        print(f"  CV listo: {cv['nombre']} | {len(cv['experiencia'])} roles")
+    except Exception as e:
+        print(f"  ERROR parse_cv: {e}")
+        sys.exit(1)
+    print()
+
+    # ── 3. Reescribir CV adaptado al cargo ────────────────────────────────────
+    print(f"PASO 3 — Reescribiendo CV para '{job['cargo']}' @ '{job['empresa']}'...")
+    print("  (Claude API — puede tardar 2-4 minutos)")
+    try:
+        rewrite_result = rewrite(cv, job, rama=TEST_RAMA)
+        print(f"  ATS Score: {rewrite_result['ats_score']}% | "
+              f"Intentos: {rewrite_result['attempts']} | "
+              f"Pasa: {rewrite_result['passed_ats']}")
+        if not rewrite_result["passed_ats"]:
+            print("  ADVERTENCIA: ATS < 95% — CV puede no estar optimizado")
+    except Exception as e:
+        print(f"  ERROR cv_rewriter: {e}")
+        sys.exit(1)
+    cv_text = rewrite_result["cv_text"]
+    print()
+
+    # ── 4. Generar PDF ────────────────────────────────────────────────────────
+    print("PASO 4 — Generando PDF...")
+    try:
+        pdf_path = generate(cv_text, job)
+        print(f"  PDF generado: {os.path.basename(pdf_path)}")
+    except Exception as e:
+        print(f"  ERROR pdf_generator: {e}")
+        sys.exit(1)
+    print()
+
+    # ── 5. Aplicar — Easy Apply ───────────────────────────────────────────────
+    print("PASO 5 — Aplicando via Canal A (Easy Apply)...")
+    print("  Browser abriendo LinkedIn...")
+    if config.HITL_ENABLED:
+        print(f"  Telegram recibirá screenshot para aprobación ({config.HITL_TIMEOUT_S // 60} min timeout)")
+    print()
+
+    result = apply(
+        job, pdf_path,
+        dry_run=False,
+        cv_text=cv_text,
+        job_description=job.get("descripcion", ""),
+    )
+
+    # ── Resultado ─────────────────────────────────────────────────────────────
+    print()
+    print("=" * 60)
+    print("RESULTADO FINAL:")
+    print(f"  Cargo:   {job['cargo']} @ {job['empresa']}")
+    print(f"  Canal:   {result['canal']}")
+    print(f"  Enviado: {result['enviado']}")
+    print(f"  Mensaje: {result['mensaje']}")
+    print("=" * 60)
+    print()
+    print("Checklist de verificación:")
+    print("  [ ] ¿Se extrajo cargo y empresa correctamente?")
+    print("  [ ] ¿El CV reescrito menciona keywords del cargo?")
+    print("  [ ] ¿El PDF generado se subió al formulario?")
+    print("  [ ] ¿Se llenaron teléfono y email?")
+    print("  [ ] ¿El campo de aspiración salarial aceptó el número? (sin error rojo)")
+    print("  [ ] ¿Telegram recibió el screenshot de Review?")
+    if config.HITL_ENABLED:
+        print("  [ ] ¿Lorena respondió SI y se hizo submit?")
+    else:
+        print("  [ ] ¿Submit automático ejecutado?")
+    print()
+    if result["enviado"]:
+        print("SMOKE TEST COMPLETO — CANAL A APROBADO")
+    else:
+        print("Smoke test completado — revisar checklist arriba")
+
+
+if __name__ == "__main__":
+    main()

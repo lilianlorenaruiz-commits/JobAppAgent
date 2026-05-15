@@ -8,7 +8,8 @@ Flujo:
   4. Aplicar via Easy Apply (Playwright + HITL Telegram)
 
 Uso:
-  python _smoke_canal_a.py
+  python _smoke_canal_a.py                                     # URL por defecto
+  python _smoke_canal_a.py https://www.linkedin.com/jobs/view/XXXXXXX
 """
 import os
 import sys
@@ -21,8 +22,9 @@ from agents.cv_rewriter import rewrite
 from agents.pdf_generator import generate
 from agents.applicator import apply, _extract_linkedin_job_info
 
-# ── URL de prueba — reemplazar con oferta real de LinkedIn Easy Apply ───────
-TEST_URL  = "https://www.linkedin.com/jobs/view/4407519233/"
+# ── URL de prueba — puede sobreescribirse con argumento CLI ─────────────────
+_DEFAULT_URL = "https://www.linkedin.com/jobs/view/4407519233/"
+TEST_URL  = sys.argv[1] if len(sys.argv) > 1 else _DEFAULT_URL
 TEST_RAMA = "C"   # A=Consultoría  B=Retail  C=Paid Media
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +54,15 @@ def _scrape_job_from_url(url: str) -> dict:
             except Exception:
                 pass
             time.sleep(3)  # render completo de componentes LinkedIn
+
+            # Hacer scroll para disparar lazy-loading de la descripción
+            try:
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+                time.sleep(1)
+                page.evaluate("window.scrollTo(0, 0)")
+                time.sleep(0.5)
+            except Exception:
+                pass
 
             info = _extract_linkedin_job_info(page)
             job["cargo"]       = info["cargo"]       or "Cargo LinkedIn"

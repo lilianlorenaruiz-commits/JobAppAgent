@@ -334,6 +334,15 @@ def _extract_linkedin_job_info(page) -> dict:
     """
     info = {"cargo": "", "empresa": "", "descripcion": ""}
     try:
+        # 0. Scroll para activar lazy-loading de la descripción
+        try:
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+            import time as _time
+            _time.sleep(0.8)
+            page.evaluate("window.scrollTo(0, 0)")
+        except Exception:
+            pass
+
         # 1. Título del tab — más estable que selectores CSS
         try:
             title_info = _parse_title_for_job_info(page.title() or "")

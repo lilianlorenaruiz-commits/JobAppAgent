@@ -360,7 +360,7 @@ CONTENT AND STRUCTURE
 9. Keep work experience roles in the EXACT order provided, most recent first. \
 Do NOT reorder roles based on relevance.
 10. Mirror the exact job-title language from the job description in the profile headline.
-11. Write in the same language style as the original CV: bilingual Spanish/English mix.
+11. Detect the primary language of the job description (job posting). If the job description is primarily in Spanish, write all bullet points and the PROFESSIONAL PROFILE section in Spanish. If it is primarily in English, write them in English. Section headers (PROFESSIONAL PROFILE, WORK EXPERIENCE, EDUCATION, SKILLS, LANGUAGES) always remain in English regardless of the job description language.
 
 FORMATTING
 12. Plain text only. No tables, no columns, no special characters beyond standard punctuation.

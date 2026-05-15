@@ -363,3 +363,61 @@ class TestMainJobDescriptionKey:
             f"en vez del contenido real de job['descripcion'].\n"
             f"Posible causa: main.py usa job.get('description') en vez de job.get('descripcion')."
         )
+
+
+# ── Ciclo 33 RED→GREEN: BUG-B — Detección idioma JD en _SYSTEM ───────────────
+
+class TestCvRewriterLanguageDetection:
+    """_SYSTEM debe instruir a Claude a detectar el idioma principal del JD
+    y redactar bullets/profile en ese idioma (manteniendo headers en inglés).
+
+    BUG-B raíz: regla 11 decía "Write in the same language style as the original CV:
+    bilingual Spanish/English mix." → siempre en inglés porque _cv_to_plain_text()
+    produce texto en inglés. Fix: detectar idioma del JD y escribir en ese idioma.
+    """
+
+    def test_system_contains_language_detection_instruction(self):
+        """_SYSTEM debe contener instrucción de detectar el idioma del JD."""
+        from agents.cv_rewriter import _SYSTEM
+        lower = _SYSTEM.lower()
+        # La instrucción debe mencionar detección de idioma del JD
+        assert any(phrase in lower for phrase in [
+            "job description",
+            "job posting",
+            "vacante",
+            "oferta",
+        ]), (
+            "La regla de idioma no menciona el JD como fuente de detección.\n"
+            f"Fragmento actual de _SYSTEM (reglas 10-14):\n"
+            f"{_SYSTEM[_SYSTEM.find('10.'):_SYSTEM.find('10.')+400]}"
+        )
+        assert any(phrase in lower for phrase in [
+            "language of the job",
+            "idioma",
+            "detect",
+            "primary language",
+            "lenguaje",
+        ]), (
+            "La regla de idioma no menciona detección o el idioma del JD.\n"
+            f"Fragmento relevante de _SYSTEM:\n"
+            f"{_SYSTEM[_SYSTEM.find('11.'):_SYSTEM.find('11.')+300]}"
+        )
+
+    def test_system_keeps_english_section_headers(self):
+        """_SYSTEM debe mantener los headers de sección en inglés (regla 24).
+
+        Independientemente del idioma de los bullets, las secciones
+        deben ser en inglés: PROFESSIONAL PROFILE, WORK EXPERIENCE, etc.
+        """
+        from agents.cv_rewriter import _SYSTEM
+        lower = _SYSTEM.lower()
+        assert any(phrase in lower for phrase in [
+            "section headers",
+            "headings",
+            "professional profile",
+            "work experience",
+            "encabezados",
+        ]), (
+            "_SYSTEM no menciona mantener headers de sección en inglés.\n"
+            "La regla de idioma debe especificar que los headers van en inglés."
+        )

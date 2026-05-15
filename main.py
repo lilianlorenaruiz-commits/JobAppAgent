@@ -151,7 +151,7 @@ def _process_job(cv: dict, job: dict, rama: str, dry_run: bool = False) -> dict:
             job, pdf_path,
             dry_run=dry_run,
             cv_text=rewrite_result["cv_text"],
-            job_description=job.get("description", ""),
+            job_description=job.get("descripcion", ""),
         )
         canal        = apply_result["canal"]
         final_status = "Enviado" if apply_result["enviado"] else "Pendiente"

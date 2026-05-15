@@ -1,13 +1,13 @@
 # Contexto de Sesión — Job Application Agent
 
-**Última actualización:** 2026-05-14
+**Última actualización:** 2026-05-14 (smoke2 — 246 tests)
 **Proyecto:** Sistema multi-agente para búsqueda y aplicación automatizada de empleo para Lorena Ruiz
 
 ---
 
 ## Estado actual del proyecto
 
-**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 228/228 tests GREEN**
+**TODOS LOS CANALES APROBADOS — 246/246 tests GREEN (post smoke2)**
 
 | Canal | Estado | Smoke test |
 |---|---|---|
@@ -85,14 +85,14 @@ python -m pytest -q    # → 228 passed
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `test_applicator_canal_a.py` | 53 | Canal A + smart fill + candidate_profile + _extract_linkedin_job_info |
+| `test_applicator_canal_a.py` | 69 | Canal A + smart fill + candidate_profile + _extract_linkedin_job_info + BUG-A/C/D fixes |
 | `test_applicator_canal_b.py` | 11 | Canal B |
 | `test_applicator_controlled.py` | 29 | Pre-producción checklist |
 | `test_applicator_v2.py` | 12 | Canal C email body |
 | `test_applicator.py` | 17 | Canal detection |
 | `test_telegram_hitl.py` | 16 | HITL wait_for_approval |
 | `test_cv_rewriter.py` | 37 | CV rewriting reglas |
-| `test_cv_rewriter_unit.py` | 15 | CV rewriting unidad (ciclo 28) |
+| `test_cv_rewriter_unit.py` | 17 | CV rewriting unidad (ciclos 28 + 33 BUG-B) |
 | `test_narrative_builder.py` | 13 | Bullets validados |
 | `test_pdf_generator.py` | 10 | PDF 2 páginas |
 | `test_ats_auditor.py` | 8 | ATS score |
@@ -121,6 +121,17 @@ python -m pytest -q    # → 228 passed
 | BUG-003: HITL timeout 5 min insuficiente (~3 min formulario + 2 min revisión) | MEDIO | `HITL_TIMEOUT_S`: 300 → 600 | `51e58c0` |
 | BUG-004: No extraía cargo/empresa/JD de la URL antes de aplicar | MEDIO | `_extract_linkedin_job_info(page)` nueva función con 7 tests | `29fdec3` |
 | BUG-002: Smoke test usaba PDF estático (Rappi) sin adaptar al cargo | CRÍTICO | `_smoke_canal_a.py` pipeline completo: scrape → rewrite → generate → apply | `d5a0da9` |
+
+---
+
+## Bugs smoke test 2 — 2026-05-14 — CORREGIDOS (segunda ronda)
+
+| Bug | Severidad | Fix | Ciclo | Commit |
+|---|---|---|---|---|
+| BUG-A: `_extract_linkedin_job_info` retorna vacíos — selectores DOM fallan en HTML real de LinkedIn | CRÍTICO | `_parse_title_for_job_info()` usa `page.title()` + `_PLACEHOLDER_VALUES` | 30 | `a3e...` |
+| BUG-D: HITL dispara en botón "Review" (67%), no en "Submit application" (100%) | CRÍTICO | `_find_submit_button()` sin Review/Revisar; _find_next_button añade Review como paso | 31 | `b1f...` |
+| BUG-C: `_maybe_upload_cv` checa `is_visible()` en file input oculto → nunca sube el CV | ALTO | Remover check `is_visible()`, llamar `set_input_files()` directamente | 32 | `63d4803` |
+| BUG-B: cv_rewriter regla 11 siempre inglés (basada en CV original, no en JD) | ALTO | Regla 11 nueva: detectar idioma del JD, escribir bullets/profile en ese idioma | 33 | `9ae9fee` |
 
 ---
 

@@ -1,148 +1,171 @@
- contexto_sesion.md
+# Contexto de Sesión — Job Application Agent
 
-  # Contexto de Sesión — Job Application Agent
+**Última actualización:** 2026-05-14
+**Proyecto:** Sistema multi-agente para búsqueda y aplicación automatizada de empleo para Lorena Ruiz
 
-  **Fecha:** 2026-05-13
-  **Proyecto:** Sistema multi-agente para búsqueda y aplicación automatizada
-  de empleo
+---
 
-  ---
+## Estado actual del proyecto
 
-  ## Resumen de lo que estábamos construyendo
+**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 186/186 tests GREEN**
 
-  Un flujo agentico automatizado que:
-  1. Lee el CV de Lorena Ruiz (ubicado en
-  `C:\Users\lilia\CV\Lorena_Ruiz_CV.pdf`)
-  2. Identifica 3 perfiles profesionales
-  3. Hace scraping de LinkedIn Jobs para cada perfil
-  4. Analiza match de skills entre CV y cargos
-  5. Reescribe CV optimizado para ATS por cada cargo
-  6. Aplica automáticamente (LinkedIn / web empresa / email)
-  7. Registra todo en BD y reporta por Telegram
+| Canal | Estado | Smoke test |
+|---|---|---|
+| A — LinkedIn Easy Apply | ✅ APROBADO | OMD Colombia `4405866108` — 2026-05-14 |
+| B — Portal empresa | ✅ APROBADO | Manpower Group computrabajo |
+| C — Email draft | ✅ APROBADO | Gmail Compose + Telegram |
 
-  ---
+---
 
-  ## Decisiones tomadas
+## Arquitectura: 6 Agentes
 
-  | Decisión | Opción elegida |
-  |----------|---------------|
-  | **Fuente principal de scraping** | LinkedIn (vía Apify LinkedIn Jobs
-  Scraper) |
-  | **Ubicación geográfica** | Bogotá, Colombia + remoto Colombia |
-  | **Modalidades** | Presencial, Híbrido, Remoto |
-  | **Nivel de inglés** | C1 como requisito |
-  | **Rango de publicación** | 8 a 16 días |
-  | **Score mínimo para aplicar** | 85% match (Skill Matcher) |
-  | **Score para CV final** | 95-100% (Agente Reclutador) |
-  | **Base de datos** | SQLite local |
-  | **Reporte diario** | Telegram (@LorenaRuiz bot) |
-  | **Token Telegram** | `8615990917:AAEfCOQVc_rER0EKOkMKcTCT_-ZSLspvZgA` |
-  | **Lenguaje** | Python 3.11+ |
-  | **Automatización navegador** | Playwright |
-  | **IA para rewriting** | Claude API (Anthropic) |
-  | **Generación PDF** | ReportLab o FPDF2 |
+1. **Orquestador** `main.py` — loop diario 08:00 con `schedule`
+2. **Scraper** `agents/scraper.py` — LinkedIn Jobs vía Apify + deduplicación + filtro seniority
+3. **Skill Matcher** `agents/skill_matcher.py` — 40% keyword + 60% Claude semántico, threshold 85%
+4. **CV Rewriter** `agents/cv_rewriter.py` — 25 reglas, anti-invención, educación hardcoded, `_fix_static_fields()`
+5. **Applicator** `agents/applicator.py` — 3 canales (A/B/C) con HITL Telegram
+6. **Reporter** `agents/reporter.py` — SQLite + Telegram diario
 
-  ---
+---
 
-  ## Los 3 Perfiles Investigados
+## Archivos clave del proyecto
 
-  ### Perfil A — Consultoría / Transformación Digital
-  - **Cargos target:** Brand Strategist, Marketing Consultant, Digital
-  Transformation, Brand Consultant
-  - **Skills clave:** Brand Strategy, Digital Transformation, Market
-  Research, Data Analysis, C1 English
-  - **Match alto:** Essity Brand Strategist (95%), Publicis Digital
-  Consultant (91%)
+| Archivo | Propósito |
+|---|---|
+| `config.py` | Config global: rutas, API keys, flags HITL |
+| `agents/applicator.py` | Agente principal — Canal A/B/C |
+| `agents/telegram_hitl.py` | Notificaciones + HITL (urllib, sin asyncio) |
+| `_smoke_canal_a.py` | Smoke test Canal A (URL OMD Colombia) |
+| `_smoke_canal_b.py` | Smoke test Canal B |
+| `_setup_browser.py` | Inicializa sesión LinkedIn en `browser_profile/` |
+| `_preflight.py` | Preflight check de APIs y configuración |
+| `_schedule_task.py` | Registra tarea Windows diaria 08:00 |
+| `narrativas/narrativas_lorena.json` | Bullets validados por Lorena (fuente de verdad) |
+| `profiles/perfil_*.json` | Perfiles A/B/C con skills target |
+| `browser_profile/` | Perfil persistente Chromium con sesión LinkedIn |
 
-  ### Perfil B — Marketing Retail
-  - **Cargos target:** Marketing Manager Retail, Trade Marketing, Category
-  Manager, Shopper Marketing
-  - **Skills clave:** Trade Marketing, Category Management, Shopper Insights,
-   P&L Management
-  - **Match alto:** Éxito Marketing Manager (82%), Falabella Retail
-  Specialist (85%)
+---
 
-  ### Perfil C — Paid Media Ads
-  - **Cargos target:** Paid Media Specialist, Amazon Ads Manager, Performance
-   Marketing, PPC Specialist
-  - **Skills clave:** Google Ads, Meta Ads, Amazon Ads, LinkedIn Ads,
-  Programmatic
-  - **Match alto:** Havas Paid Media (90%), GroupM Amazon Ads (92%)
+## Canal A — LinkedIn Easy Apply — Lecciones aprendidas
 
-  ---
+### Shadow DOM de LinkedIn
+`document.querySelectorAll('button')` NO encuentra "Solicitud sencilla" — está en shadow DOM.
+**Fix:** `page.get_by_role("button")` y `page.locator("text=X")` penetran shadow DOM.
+**Fix:** Esperar 3-4s después de cargar la página antes de buscar el botón.
 
-  ## Arquitectura: 6 Agentes
+### Badge misclick
+`page.locator("text=Solicitud sencilla")` encuentra badges de "Similar Jobs" y navega al trabajo equivocado.
+**Fix:** `get_by_role("button", name=regex)` primero — solo botones reales, no badges `<a>/<span>`.
 
-  1. **Orquestador** — Loop diario, coordinación
-  2. **Scraper** — LinkedIn Jobs vía Apify
-  3. **Skill Matcher** — CV vs cargo (threshold 85%)
-  4. **CV Rewriter** — ATS optimization (threshold 95%)
-  5. **Applicator** — LinkedIn / Web / Email
-  6. **Reporter** — SQLite + Telegram
+### Botones bilingües
+LinkedIn español: "Siguiente", "Revisar tu solicitud", "Enviar solicitud", "Review"
+LinkedIn inglés: "Next", "Review your application", "Submit application"
+`_find_next_button()` y detección de submit cubren ambos idiomas.
 
-  ### 3 Ramas de Búsqueda
-  - Rama A: Consultoría
-  - Rama B: Retail Marketing
-  - Rama C: Paid Media
+### Campos numéricos
+`_fill_free_text_fields` excluye `input[type=number]` y `inputmode=numeric/decimal`.
+Claude no puede inventar salarios. Próxima mejora: `candidate_profile.json`.
 
-  ---
+### Fix asyncio Canal A y B
+`asyncio.run()` no puede correr dentro del event loop de Playwright sync API.
+**Fix Canal A:** `_linkedin_playwright_loop()` retorna `None` → `_apply_linkedin()` llama `_apply_web()` DESPUÉS de que cierra el `with sync_playwright()`.
+**Fix Canal B:** `send_cv_ready_browser()` se llama ANTES del `with sync_playwright()`.
 
-  ## Archivos Creados
+### Ya aplicado
+`_linkedin_playwright_loop()` verifica `text=Solicitud enviada` antes de buscar el botón.
+Si ya fue aplicado → retorna `enviado=True` sin reenviar.
 
-  | Archivo | Ruta |
-  |---------|------|
-  | Arquitectura completa |
-  `C:\Users\lilia\JobAppAgent\docs\arquitectura_flujo_agentico.md` |
-  | Contexto de sesión | `C:\Users\lilia\JobAppAgent\docs\contexto_sesion.md`
-   |
+---
 
-  ---
+## Test Suite — 186 tests
 
-  ## Archivos Planeados para Crear (Pendientes)
+```bash
+python -m pytest -q    # → 186 passed
+```
 
-  - [ ] `C:\Users\lilia\JobAppAgent\main.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\config.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\requirements.txt`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\__init__.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\orquestador.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\scraper.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\skill_matcher.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\cv_rewriter.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\applicator.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\agents\reporter.py`
-  - [ ] `C:\Users\lilia\JobAppAgent\profiles\perfil_a_consultoria.json`
-  - [ ] `C:\Users\lilia\JobAppAgent\profiles\perfil_b_retail.json`
-  - [ ] `C:\Users\lilia\JobAppAgent\profiles\perfil_c_paidmedia.json`
-  - [ ] `C:\Users\lilia\JobAppAgent\database\schema.sql`
-  - [ ] `C:\Users\lilia\JobAppAgent\config\telegram_token.txt`
+| Archivo | Tests | Cubre |
+|---|---|---|
+| `test_applicator_canal_a.py` | 28 | Canal A completo + edge cases + asyncio |
+| `test_applicator_canal_b.py` | 11 | Canal B |
+| `test_applicator_controlled.py` | 29 | Pre-producción checklist |
+| `test_applicator_v2.py` | 12 | Canal C email body |
+| `test_applicator.py` | 17 | Canal detection |
+| `test_telegram_hitl.py` | 16 | HITL wait_for_approval |
+| `test_cv_rewriter.py` | 37 | CV rewriting reglas |
+| `test_narrative_builder.py` | 13 | Bullets validados |
+| `test_pdf_generator.py` | 10 | PDF 2 páginas |
+| `test_ats_auditor.py` | 8 | ATS score |
+| `test_pipeline.py` | 7 | End-to-end dry-run |
 
-  ---
+---
 
-  ## Lo que alcanzamos a hacer en esta sesión
+## APIs y configuración
 
-  - [x] Leer y parsear el CV de Lorena Ruiz
-  - [x] Identificar los 3 perfiles profesionales
-  - [x] Investigar cargos reales en LinkedIn para cada perfil
-  - [x] Analizar patrones de skills por perfil
-  - [x] Calcular match scores contra el CV
-  - [x] Obtener el token de Telegram
-  - [x] Diseñar la arquitectura completa del flujo agentico (6 agentes)
-  - [x] Definir el esquema de base de datos SQLite
-  - [x] Definir la estructura de carpetas del proyecto
-  - [x] Documentar todo en `arquitectura_flujo_agentico.md`
-  - [x] Escribir este contexto de sesión
+| Servicio | Archivo | Estado |
+|---|---|---|
+| Anthropic API | `config/anthropic_key.txt` | ACTIVA |
+| Telegram Bot | `config/telegram_token.txt` | Activo — @LilianAgent_lorenaRuiz_bot |
+| Apify | `config/apify_key.txt` | Configurada |
+| LinkedIn Session | `browser_profile/` | Guardada |
+| Windows Task | `JobAppAgent_LorenaRuiz` 08:00 | Registrada |
 
-  ## Pendiente principal para la siguiente sesión
+---
 
-  **Implementar la Fase 1:** Crear estructura del proyecto, schema SQLite,
-  parser de CV, y empezar con el scraper de LinkedIn conectado a Apify.
+## Próxima mejora planeada: candidate_profile.json
 
-  ---
+Repositorio de respuestas estructuradas de Lorena para preguntas recurrentes en formularios Easy Apply:
 
-  ## Notas importantes
+```json
+{
+  "salary_expectation":  "8000000",
+  "currency":            "COP",
+  "city":                "Bogotá D.C.",
+  "lives_in_bogota":     "Sí",
+  "willing_to_relocate": "No",
+  "willing_to_travel":   "Sí",
+  "years_experience":    "14",
+  "work_authorization":  "Sí",
+  "english_level":       "C2",
+  "availability":        "Inmediata"
+}
+```
 
-  - El CV está en `C:\Users\lilia\CV\Lorena_Ruiz_CV.pdf`
-  - El proyecto arranca desde la creacion de la carpeta`C:\Users\lilia\JobAppAgent\`
-  - El stop hook de esta sesión se activó por el comando `/goal` — no es
-  necesario para sesiones nuevas
-  - El bot de Telegram ya está creado: @JobAppAgent_lorenaRuiz_bot
+Flujo: `_match_profile_question(question)` por keywords → perfil → si no match → Claude Haiku.
+Esto resuelve: campos numéricos (salario), dropdowns sí/no, y preguntas repetidas entre postulaciones.
+
+---
+
+## Comandos de producción
+
+```bash
+# Setup inicial (una vez)
+python _setup_browser.py      # inicializar sesión LinkedIn
+python _schedule_task.py      # registrar tarea Windows 08:00
+
+# Verificación
+python _preflight.py          # check APIs y configuración
+python -m pytest -q           # 186 tests
+
+# Smoke tests manuales
+python _smoke_canal_a.py      # Canal A con URL real Easy Apply
+python _smoke_canal_b.py      # Canal B con URL real portal
+
+# Producción
+python main.py --once --dry-run --rama C    # dry-run una vez
+python main.py --once --rama C              # real una vez
+python main.py                              # loop diario 08:00
+```
+
+---
+
+## Roles y fechas canónicas de Lorena
+
+| Rol | Empresa | Fecha | Mercado |
+|---|---|---|---|
+| Paid Media Specialist / AM LinkedIn Ads | Teleperformance (LinkedIn) | Feb 2026 – Present | Latin America ONLY |
+| Campaign Planner Contractor | Amazon, Colombia | May 2025 – Feb 2026 | APAC ONLY |
+| Digital Channels Consultant | Avanti IT SAS | Aug 2021 – Apr 2025 | Colombia |
+| Marketing Manager | Alcalisa S.A. | 2013 – 2018 | Ecuador |
+| Commercial Director | GRC S.A. | 2012 – 2013 | Ecuador / China / Russia |
+
+**IMPORTANTE:** Amazon terminó Feb 2026. LinkedIn empezó Feb 2026. Nunca mezclar mercados APAC/LATAM.

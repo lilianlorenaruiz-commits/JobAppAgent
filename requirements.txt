@@ -1,5 +1,6 @@
 anthropic>=0.101.0
 pdfplumber>=0.11.0
+pypdf>=3.0.0
 reportlab>=4.0
 schedule>=1.2.0
 python-telegram-bot>=20.0

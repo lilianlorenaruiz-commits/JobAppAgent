@@ -6,13 +6,17 @@ Layout (inspirado en template "White and Black Tech Professional Resume"):
   - Nombre grande bold centrado + subtítulo cargo + HR doble en header
   - Secciones: título bold uppercase + línea delgada debajo
   - Experiencia / Educación: cargo bold izquierda | fecha bold derecha (tabla 2 cols)
-  - Skills: tabla 3 columnas
+  - Skills: lista vertical con bullets
   - Bullets con hanging indent
   - Fuente Helvetica estándar — ATS-friendly
+
+Palanca 2: si el PDF generado supera 2 páginas, se reintenta con márgenes y fuente
+más pequeños hasta encajar en 2 páginas.
 """
 import os
 import re
 import sys
+import unicodedata
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
@@ -29,10 +33,22 @@ import config
 BLACK = colors.black
 
 _PAGE_W, _PAGE_H = A4
-_MARGIN = 1.8 * cm
-_CONTENT_W = _PAGE_W - 2 * _MARGIN  # ~493 pt ≈ 17.4 cm
+
+# ── Intentos de ajuste automático (Palanca 2) ──────────────────────────────────
+# Cada tupla: (margen_cm, body_size_pt)
+_FIT_ATTEMPTS = [
+    (1.8, 9.0),
+    (1.5, 8.5),
+    (1.2, 8.0),
+]
 
 # ── Secciones conocidas ────────────────────────────────────────────────────────
+
+def _strip_accents(s: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn"
+    )
 
 _SECTIONS = {
     "PROFESSIONAL PROFILE", "WORK EXPERIENCE", "KEY ACHIEVEMENTS",
@@ -41,11 +57,19 @@ _SECTIONS = {
     "PERFIL PROFESIONAL", "EXPERIENCIA LABORAL", "EDUCACION",
     "HABILIDADES", "IDIOMAS", "LOGROS PRINCIPALES",
 }
+_SECTIONS_NORM = {_strip_accents(s) for s in _SECTIONS}
+
 _EXP_SECS     = {"WORK EXPERIENCE", "EXPERIENCIA LABORAL"}
 _EDU_SECS     = {"EDUCATION", "EDUCACION"}
 _PROFILE_SECS = {"PROFESSIONAL PROFILE", "PERFIL PROFESIONAL", "SUMMARY"}
 _SKILLS_SECS  = {"SKILLS", "HABILIDADES"}
 _LANG_SECS    = {"LANGUAGES", "IDIOMAS"}
+
+_EXP_SECS_NORM     = {_strip_accents(s) for s in _EXP_SECS}
+_EDU_SECS_NORM     = {_strip_accents(s) for s in _EDU_SECS}
+_PROFILE_SECS_NORM = {_strip_accents(s) for s in _PROFILE_SECS}
+_SKILLS_SECS_NORM  = {_strip_accents(s) for s in _SKILLS_SECS}
+_LANG_SECS_NORM    = {_strip_accents(s) for s in _LANG_SECS}
 
 _DATE_RE = re.compile(
     r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?"
@@ -63,7 +87,7 @@ def _safe(t: str) -> str:
 
 
 def _is_section(line: str) -> bool:
-    return line.strip().upper() in _SECTIONS
+    return _strip_accents(line.strip().upper()) in _SECTIONS_NORM
 
 
 def _has_date(line: str) -> bool:
@@ -84,7 +108,8 @@ def _hr(space_after: int = 4) -> HRFlowable:
 
 # ── Estilos ────────────────────────────────────────────────────────────────────
 
-def _styles() -> dict:
+def _styles(body_size: float = 9.0) -> dict:
+    b = body_size
     return {
         "name": ParagraphStyle("cv_name",
             fontName="Helvetica-Bold", fontSize=22, leading=26,
@@ -93,42 +118,42 @@ def _styles() -> dict:
             fontName="Helvetica-Bold", fontSize=11, leading=14,
             alignment=TA_CENTER, spaceAfter=6),
         "contact": ParagraphStyle("cv_contact",
-            fontName="Helvetica", fontSize=9, leading=12,
+            fontName="Helvetica", fontSize=b, leading=b + 3,
             alignment=TA_CENTER, spaceBefore=5, spaceAfter=6),
         "profile": ParagraphStyle("cv_profile",
-            fontName="Helvetica", fontSize=9, leading=13,
+            fontName="Helvetica", fontSize=b, leading=b + 4,
             alignment=TA_JUSTIFY, spaceAfter=4),
         "section_hdr": ParagraphStyle("cv_section_hdr",
-            fontName="Helvetica-Bold", fontSize=10, leading=13,
-            alignment=TA_LEFT, spaceBefore=10, spaceAfter=2),
+            fontName="Helvetica-Bold", fontSize=b + 1, leading=b + 4,
+            alignment=TA_LEFT, spaceBefore=14, spaceAfter=2),
         "role": ParagraphStyle("cv_role",
-            fontName="Helvetica-Bold", fontSize=9, leading=12,
+            fontName="Helvetica-Bold", fontSize=b, leading=b + 3,
             alignment=TA_LEFT, spaceBefore=6, spaceAfter=0),
         "role_date": ParagraphStyle("cv_role_date",
-            fontName="Helvetica-Bold", fontSize=9, leading=12,
+            fontName="Helvetica-Bold", fontSize=b, leading=b + 3,
             alignment=TA_RIGHT, spaceBefore=6, spaceAfter=0),
         "company": ParagraphStyle("cv_company",
-            fontName="Helvetica", fontSize=9, leading=12,
+            fontName="Helvetica-Bold", fontSize=b, leading=b + 3,
             alignment=TA_LEFT, spaceAfter=2),
         "bullet": ParagraphStyle("cv_bullet",
-            fontName="Helvetica", fontSize=9, leading=13,
+            fontName="Helvetica", fontSize=b, leading=b + 4,
             leftIndent=11, firstLineIndent=-7, spaceAfter=2),
         "body": ParagraphStyle("cv_body",
-            fontName="Helvetica", fontSize=9, leading=13,
+            fontName="Helvetica", fontSize=b, leading=b + 4,
             alignment=TA_JUSTIFY, spaceAfter=3),
         "skills_item": ParagraphStyle("cv_skills_item",
-            fontName="Helvetica", fontSize=9, leading=14, alignment=TA_LEFT),
+            fontName="Helvetica", fontSize=b, leading=b + 5, alignment=TA_LEFT),
     }
 
 
 # ── Componentes de layout ──────────────────────────────────────────────────────
 
-def _role_date_row(role: str, date_str: str, S: dict) -> Table:
+def _role_date_row(role: str, date_str: str, S: dict, content_w: float) -> Table:
     """Tabla 2 columnas: cargo bold izquierda | fecha bold derecha."""
     t = Table(
         [[Paragraph(_safe(role), S["role"]),
           Paragraph(_safe(date_str), S["role_date"])]],
-        colWidths=[_CONTENT_W * 0.68, _CONTENT_W * 0.32],
+        colWidths=[content_w * 0.68, content_w * 0.32],
     )
     t.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
@@ -140,16 +165,16 @@ def _role_date_row(role: str, date_str: str, S: dict) -> Table:
     return t
 
 
-def _skills_grid(skills: list, S: dict) -> Table:
-    """Tabla 3 columnas para skills/habilidades."""
+def _skills_grid(skills: list, S: dict, content_w: float) -> Table:
+    """Tabla 2 columnas para skills/habilidades."""
     rows = []
-    for i in range(0, len(skills), 3):
-        chunk = skills[i:i+3]
-        while len(chunk) < 3:
+    for i in range(0, len(skills), 2):
+        chunk = skills[i:i+2]
+        while len(chunk) < 2:
             chunk.append("")
         rows.append([Paragraph(_safe(s), S["skills_item"]) for s in chunk])
-    cw = _CONTENT_W / 3
-    t = Table(rows, colWidths=[cw, cw, cw])
+    cw = content_w / 2
+    t = Table(rows, colWidths=[cw, cw])
     t.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
@@ -162,7 +187,7 @@ def _skills_grid(skills: list, S: dict) -> Table:
 
 # ── Parser principal ───────────────────────────────────────────────────────────
 
-def _build_flowables(cv_text: str, job: dict, S: dict) -> list:
+def _build_flowables(cv_text: str, job: dict, S: dict, content_w: float) -> list:
     lines = [l.rstrip() for l in cv_text.split("\n")]
     n = len(lines)
     flowables = []
@@ -213,7 +238,7 @@ def _build_flowables(cv_text: str, job: dict, S: dict) -> list:
 
         # Header de sección
         if _is_section(line):
-            section = line.strip().upper()
+            section = _strip_accents(line.strip().upper())
             flowables += [
                 Paragraph(_safe(line.upper()), S["section_hdr"]),
                 _hr(space_after=4),
@@ -224,29 +249,64 @@ def _build_flowables(cv_text: str, job: dict, S: dict) -> list:
         up = section or ""
 
         # ── Perfil profesional ──────────────────────────
-        if up in _PROFILE_SECS:
+        if up in _PROFILE_SECS_NORM:
             flowables.append(Paragraph(_safe(line), S["profile"]))
             i += 1
             continue
 
-        # ── Skills: tabla 3 columnas ────────────────────
-        if up in _SKILLS_SECS:
-            skills = [s.strip() for s in re.split(r"[,|]", line) if s.strip()]
-            if skills:
-                flowables.append(_skills_grid(skills, S))
+        # ── Skills: lista vertical con bullets ──────────────────
+        if up in _SKILLS_SECS_NORM:
+            if _is_bullet(line):
+                flowables.append(Paragraph("• " + _safe(_strip_bullet(line)), S["bullet"]))
+            else:
+                # Fallback: línea sin marcador → un bullet por ítem separado por pipe
+                for skill in [s.strip() for s in line.split("|") if s.strip()]:
+                    flowables.append(Paragraph("• " + _safe(skill), S["bullet"]))
             i += 1
             continue
 
         # ── Idiomas: bullet por idioma ──────────────────
-        if up in _LANG_SECS:
+        if up in _LANG_SECS_NORM:
             parts = [p.strip() for p in re.split(r"\|", line) if p.strip()]
             for p in parts:
                 flowables.append(Paragraph("• " + _safe(p), S["bullet"]))
             i += 1
             continue
 
-        # ── Experiencia / Educación ─────────────────────
-        if up in (_EXP_SECS | _EDU_SECS):
+        # ── Educación: título bold + fecha + institución ────────────
+        if up in _EDU_SECS_NORM:
+            if _is_bullet(line):
+                # Título del grado (con bullet explícito del LLM) → bold
+                flowables.append(
+                    Paragraph("• <b>" + _safe(_strip_bullet(line)) + "</b>", S["bullet"])
+                )
+                i += 1
+                # IMPORTANTE: consumir también las líneas siguientes (fecha, institución)
+                # como body-regular — sin este while, la siguiente línea re-entraría al
+                # bloque de educación y sería renderizada como bold (bug de cross-bleed).
+                while i < n:
+                    nxt = lines[i].strip()
+                    if not nxt or _is_section(lines[i]) or _is_bullet(nxt):
+                        break
+                    flowables.append(Paragraph(_safe(nxt), S["body"]))
+                    i += 1
+                continue
+            # Primera línea del bloque = título del grado (sin bullet) → bullet bold
+            flowables.append(
+                Paragraph("• <b>" + _safe(line) + "</b>", S["bullet"])
+            )
+            i += 1
+            # Líneas siguientes: fecha (body) e institución (body) — regular weight
+            while i < n:
+                nxt = lines[i].strip()
+                if not nxt or _is_section(lines[i]) or _is_bullet(nxt):
+                    break
+                flowables.append(Paragraph(_safe(nxt), S["body"]))
+                i += 1
+            continue
+
+        # ── Experiencia ─────────────────────────────────────────
+        if up in _EXP_SECS_NORM:
             if _is_bullet(line):
                 flowables.append(Paragraph("• " + _safe(_strip_bullet(line)), S["bullet"]))
                 i += 1
@@ -273,7 +333,7 @@ def _build_flowables(cv_text: str, job: dict, S: dict) -> list:
                 j += 1
 
             if date_str:
-                flowables.append(_role_date_row(role_title, date_str, S))
+                flowables.append(_role_date_row(role_title, date_str, S, content_w))
                 if company:
                     flowables.append(Paragraph(_safe(company), S["company"]))
                 i = j
@@ -304,11 +364,41 @@ def _output_path(cargo: str, empresa: str) -> str:
     return os.path.join(config.OUTPUT_DIR, filename)
 
 
+# ── Palanca 2: conteo de páginas y build parametrizable ───────────────────────
+
+def _count_pages(path: str) -> int:
+    try:
+        import pypdf
+        with open(path, "rb") as f:
+            return len(pypdf.PdfReader(f).pages)
+    except Exception:
+        return 0
+
+
+def _build_pdf(path: str, cv_text: str, job: dict, margin_cm: float, body_size: float) -> None:
+    margin = margin_cm * cm
+    content_w = _PAGE_W - 2 * margin
+    S = _styles(body_size)
+    doc = SimpleDocTemplate(
+        path,
+        pagesize=A4,
+        leftMargin=margin,
+        rightMargin=margin,
+        topMargin=margin,
+        bottomMargin=margin,
+        title=f"Lorena Ruiz — {job['cargo']}",
+        author="Lorena Ruiz",
+    )
+    doc.build(_build_flowables(cv_text, job, S, content_w))
+
+
 # ── API pública ────────────────────────────────────────────────────────────────
 
 def generate(cv_text: str, job: dict) -> str:
     """
     Genera el PDF del CV con diseño profesional monocromático.
+    Palanca 2: si el resultado supera 2 páginas, reduce márgenes y fuente
+    automáticamente hasta encajar en 2 páginas.
 
     Args:
         cv_text: texto plano del CV (output de cv_rewriter.rewrite)
@@ -318,20 +408,16 @@ def generate(cv_text: str, job: dict) -> str:
         Ruta absoluta del PDF generado.
     """
     path = _output_path(job["cargo"], job.get("empresa", "empresa"))
-    S    = _styles()
 
-    doc = SimpleDocTemplate(
-        path,
-        pagesize=A4,
-        leftMargin=_MARGIN,
-        rightMargin=_MARGIN,
-        topMargin=1.8 * cm,
-        bottomMargin=1.8 * cm,
-        title=f"Lorena Ruiz — {job['cargo']}",
-        author="Lorena Ruiz",
-    )
+    for margin_cm, body_size in _FIT_ATTEMPTS:
+        _build_pdf(path, cv_text, job, margin_cm, body_size)
+        pages = _count_pages(path)
+        if pages <= 2:
+            if margin_cm < 1.8:
+                print(f"[PDFGenerator] Ajuste automático: {margin_cm}cm / {body_size}pt — {pages} página(s)")
+            break
+        print(f"[PDFGenerator] {pages} páginas con {margin_cm}cm / {body_size}pt — reintentando...")
 
-    doc.build(_build_flowables(cv_text, job, S))
     print(f"[PDFGenerator] PDF guardado: {path}")
     return path
 
@@ -341,7 +427,8 @@ def generate(cv_text: str, job: dict) -> str:
 if __name__ == "__main__":
     sample = """LORENA RUIZ
 
-Bogota D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884
+Bogota D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884  |  www.linkedin.com/in/lilianlorenaruiz/
+
 
 PROFESSIONAL PROFILE
 Performance Marketing professional with 14+ years in marketing and digital strategy, including hands-on paid media campaign management across Google Ads, Meta Ads, Amazon Ads, and LinkedIn Ads. Expertise in ROAS and ACOS optimization, programmatic advertising, and data analysis. Fully bilingual Spanish/English (C2 Proficient, EF SET certified).
@@ -357,7 +444,7 @@ February 2026 - Present  |  Bogota, Hybrid
 
 Campaign Planner Contractor
 Amazon, Colombia
-May 2025 - Present  |  Bogota
+May 2025 - Feb 2026  |  Bogota
 - Managed Amazon DSP programmatic campaigns for APAC premium brands (Midea, Narwal, Bedsure, Jackery) supporting 4 Global Account Executives.
 - Improved Narwal tROAS from 1.28x to 3.28x generating USD 100,000 in attributed sales in 30 days via remarketing optimization and video creative refresh.
 - Achieved #1 position for Modelones in Nail Polish category Q3-Q4 2025 on Amazon APAC through Market Research and DSP strategy.

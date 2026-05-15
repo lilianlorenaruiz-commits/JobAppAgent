@@ -5,7 +5,7 @@
 
   "roles": [
     {
-      "cargo": "Paid Media Specialist / Account Manager — LinkedIn Ads",
+      "cargo": "Paid Media Specialist / Account Manager, LinkedIn Ads",
       "empresa": "Teleperformance (contract for LinkedIn Marketing Solutions)",
       "fecha": "February 2026 – Present",
       "ubicacion": "Bogotá, Hybrid",
@@ -16,7 +16,7 @@
       "tipo_clientes": "B2B enterprise companies across Latin America. Example: ThinkOnward (open innovation platform for the energy sector — geocientíficos, Data Science professionals).",
       "tipo_campanas": ["Sponsored Content", "Lead Gen Forms", "Engagement", "Website Visits", "Website Conversions"],
       "kpis_principales": ["CPL", "CPA", "CPC", "CTR", "Average Frequency", "Website Conversions", "Lead Gen Form fills"],
-      "coordinacion": "Delivers weekly performance reviews and optimization recommendations in English to Global Account Executives based in Singapore, Sydney, and Tokyo. NOTE: these AEs are the supervisors she reports TO — the market she manages is Latin America, not APAC.",
+      "coordinacion": "Delivers weekly campaign performance reviews and optimization recommendations in English to LinkedIn Marketing Solutions account management. Market scope: Latin America only. NOTE: Global Account Executives in Singapore, Sydney, and Tokyo belong to the Amazon role — do NOT attribute them to this LinkedIn/Teleperformance role.",
       "logros": [
         "ThinkOnward campaign (launched March 10, 2026): USD 200 investment → 198,752 impressions, 84,129 unique specialized professionals reached (Earth Sciences + Data Science audience), 208 clicks to site, CPC USD 0.96, CPM USD 1.01, CTR 0.105%. Achieved high-efficiency B2B reach in a highly specialized niche.",
         "Manages and optimizes LinkedIn Ads campaigns for 300+ B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives."
@@ -25,23 +25,40 @@
     {
       "cargo": "Campaign Planner Contractor",
       "empresa": "Amazon, Colombia",
-      "fecha": "May 2025 – Present",
+      "fecha": "May 2025 – Feb 2026",
       "ubicacion": "Bogotá",
       "mercado": "APAC markets ONLY — Latin America does NOT apply to this role",
       "tipo_trabajo": "Amazon DSP programmatic campaign planning — no direct Seller/Vendor Central management. Supports Global Account Executives with campaign strategy, optimization, and reporting.",
       "herramientas": ["Amazon DSP", "Amazon Marketing Cloud (AMC)", "Tableau", "Power BI"],
-      "estructura_equipo": "Supports 4 Global Account Executives (GAEs) in APAC (Singapore, Sydney, Tokyo), each managing 5 premium brand accounts with annual sales targets of USD 3M per account.",
+      "estructura_equipo": "Supports 4 Global Account Executives, each managing 5 premium brand accounts with annual sales targets of USD 3M per account.",
       "marcas_gestionadas": ["Midea", "Bedsure", "Narwal", "Jackery", "Reolink", "Momcozy", "Govee", "Modelones", "TCL"],
       "asins_por_campana": "30-60 ASINs (bulk: up to 60 for Midea/Bedsure; focused campaigns: 20-30 for Narwal/Jackery)",
       "objetivos_campanas": ["Conquista NTB (new-to-brand) via in-market audiences and video in-stream", "Remarketing y fidelización con anuncios dinámicos de productos vistos", "Lower-funnel video: push conversion when CPC in search is high using lookalike audiences"],
       "coordinacion": "Weekly meetings in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo). Monthly reports on tROAS, NTB Sales, and campaign optimizations for APAC premium accounts.",
       "kpis_principales": ["ROAS", "tROAS", "NTB Sales", "Total Sales", "DPVR", "Brand Search Rate", "CTR", "CPC", "ACOS"],
       "logros": [
-        "Narwal (Nov 20 – Dec 21, 2025 — APAC): tROAS improved from 1.28x to 3.28x; USD 100,000 attributed sales in 30 days via DSP remarketing, video creative refresh, and impression frequency capping.",
-        "Modelones (Q3 2025 — APAC): Achieved #1 position in Nail Polish category on Amazon for Q3 and Q4 2025, recovering category share through Amazon ecosystem Market Research (keywords, competitive landscape, category dynamics, trend analysis) + DSP strategy.",
-        "TCL Electronics (2025 — APAC): Supported NFL 2025 brand strategy with aggressive DSP display and contextual ad packages across NFL season; TCL reported +15.4% annual revenue growth (1,145.8B HKD) in a declining Home Market category.",
+        "Narwal (Nov 20 – Dec 21, 2025): tROAS improved from 1.28x to 3.28x; USD 100,000 attributed sales in 30 days via DSP remarketing, video creative refresh, and impression frequency capping.",
+        "Modelones (Q3 2025): Achieved #1 position in Nail Polish category on Amazon for Q3 and Q4 2025, recovering category share through Amazon ecosystem Market Research (keywords, competitive landscape, category dynamics, trend analysis) + DSP strategy.",
+        "TCL Electronics (2025): Supported NFL 2025 brand strategy with aggressive DSP display and contextual ad packages across NFL season; TCL reported +15.4% annual revenue growth (1,145.8B HKD) in a declining Home Market category.",
         "Designed funnel-based reporting format (awareness → consideration → conversion) adopted as internal standard by all new Account Executives in the CPC Team Colombia. Reduced APAC team report review time by 30%.",
-        "Transformed results presentations into commercial narratives crossing competitive data, share of voice, and market behavior — facilitating faster budget optimization decisions with APAC Global Account Executives."
+        "Transformed results presentations into commercial narratives crossing competitive data, share of voice, and market behavior, facilitating faster budget optimization decisions with Global Account Executives."
+      ]
+    },
+    {
+      "cargo": "Digital Channels and Customer Service Consultant",
+      "empresa": "Avanti IT SAS",
+      "fecha": "August 2021 – April 2025",
+      "ubicacion": "Colombia",
+      "tipo_trabajo": "B2B consultative sales for high-value public sector clients — aligning AI-powered digital solutions (chatbots, OCR, software integrations) with business objectives and citizen experience improvement.",
+      "clientes_clave": ["COMFENALCO EPS", "Alcaldía Mayor de Bogotá", "Alcaldía de Funza", "Superfinanciera", "IDEAM", "Unidad de Restitución de Tierras", "Rama Judicial", "Unisanitas"],
+      "logros": [
+        "Increased client satisfaction by 20 percent through conversational flow optimization, reduced response times, and personalized interaction strategies.",
+        "COMFENALCO EPS (COVID-19): Implemented chatbot for remote pre-diagnosis and self-service appointment management. Reduced physical consultation load at care centers by 80 percent. Handled more than 50,000 patients with remote pre-diagnosis. Integrated chatbot with enterprise databases for real-time access to exam results, invoices, and health certificates.",
+        "Alcaldía Mayor de Bogotá (Chatico): In 9 months of operation, managed 575,134 autonomous conversations. 95 percent resolved by the bot, 5 percent escalated to human agents. Reduced call center congestion significantly.",
+        "Implemented the first interactive voting system via WhatsApp for participatory budgets at the Alcaldía Mayor de Bogotá: 103,785 votes in 60 days with real-time statistics.",
+        "Alcaldía de Funza (Elikin): Trained local staff to self-manage the bot. Achieved 175 average conversations per day. Proposed transactional flow implementation for fast-query resolution.",
+        "Delivered digital channel projects for Superfinanciera (chatbot integrated with internal regulatory databases), IDEAM (AI chatbot for climate information on web), Unidad de Restitución de Tierras (Liferay 6.2 portal), Rama Judicial (Liferay 6.1 to 7.1 migration), and Unisanitas (web portal Liferay).",
+        "Developed OCR module with AI for text recognition in documents and images."
       ]
     },
     {
@@ -185,13 +202,148 @@
     "nivel_equivalente": "C2 Proficient",
     "fecha_certificacion": "Octubre 2025",
     "uso_profesional": [
-      "Weekly performance reviews and optimization recommendations in English to Global Account Executives (Singapore, Sydney, Tokyo) — LinkedIn/Teleperformance role, Latin America market",
+      "Weekly meetings and monthly reports in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo) — Amazon Campaign Planner role, APAC market",
       "Reuniones semanales en inglés con Global Account Executives de Amazon APAC (Singapur, Sídney, Tokio) — Amazon role, APAC market",
       "Reportes mensuales al equipo APAC sobre performance de cuentas premium (tROAS, NTB Sales, optimizaciones) — Amazon role",
       "Consultoría en inglés a anunciantes internacionales en LinkedIn (ej. ThinkOnward, sector energético) — Latin America",
       "Presentaciones internacionales en inglés a compradores chinos y rusos en GRC S.A. (negociación de distribución exclusiva)",
       "Visitas a proveedores escoceses de malta en Alcalisa — coordinación técnica y logística de importación en inglés"
     ]
+  },
+
+  "bullets_validados": {
+
+    "A": [
+      "Led brand strategy and digital transformation at Alcalisa S.A., growing company revenue from USD 1.5M to USD 3.0M in 4 years.",
+      "Managed annual marketing budget of USD 350,000 to USD 450,000, representing 12 to 15 percent of revenue, with full P&L responsibility across brand, trade, and digital.",
+      "Grew brand awareness from 18 percent to 34 percent by migrating full media investment from TV and radio to digital after Ecuador's Ley de Comunicacion prohibited alcohol advertising on traditional media.",
+      "Achieved 45 percent share of voice on social media in Ecuador's national spirits segment, starting from zero in 2013.",
+      "Grew market share from 12 percent to 18 percent in Ecuador's national spirits segment in 4 years, ascending to 2nd largest company in the category.",
+      "Led 8 product launches and 6 integrated 360-degree campaigns. Carnaval 360 (2016) delivered 22 percent sales uplift in February and March vs. prior year.",
+      "Presented results monthly to the CEO and quarterly to the Board of Directors at Alcalisa S.A. Delivered commercial presentations in English to buyers in China and Russia at GRC S.A.",
+      "Managed a team of 12 direct reports and coordinated 3 external agencies: digital, design and branding, and activations.",
+      "Implemented Power BI sales reporting integrating retail chain and distributor data, replacing manual Excel-based processes.",
+      "Trained more than 150 people per year: regional distributors, bartenders, and HORECA staff at 5-star hotels including Hotel Quito, Casa Gangotena, and Plaza Grande.",
+      "Created and positioned 3 Spanish wine brands for export to China and Russia at GRC S.A.: brand architecture, naming, packaging, storytelling, and B2B distributor strategy.",
+      "Exceeded export target by 50 percent at GRC S.A.: from 4 projected containers per year to 6 closed, generating approximately USD 108,000 in annual revenue.",
+      "Secured exclusive distribution agreements in Shanghai and Moscow for 2 of the 3 wine brands launched at GRC S.A.",
+      "Grew exports to Asia by 7.5 percent in one year at GRC S.A.",
+      "Transformed results presentations into commercial narratives crossing competitive data, share of voice, and market behavior at Amazon, facilitating faster budget optimization decisions with APAC account management teams.",
+      "Manages more than 300 B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion campaigns on LinkedIn Ads.",
+      "Led B2B consultative sales for high-value public sector clients at Avanti IT SAS, including COMFENALCO EPS, Alcaldía Mayor de Bogotá, and Alcaldía de Funza, aligning AI-powered digital solutions with business objectives.",
+      "Implemented the first interactive voting system via WhatsApp for participatory budgets at the Alcaldía Mayor de Bogotá: 103,785 votes in 60 days with real-time statistics.",
+      "Managed Chatico chatbot for the Alcaldía Mayor de Bogotá: 575,134 autonomous conversations in 9 months. 95 percent resolved by the bot, 5 percent escalated to human agents.",
+      "Improved client satisfaction by 20 percent at Avanti IT SAS through conversational flow optimization, reduced response times, and personalized interaction design.",
+      "Implemented COMFENALCO EPS chatbot during COVID-19: reduced physical consultation load by 80 percent and handled more than 50,000 patients with remote pre-diagnosis."
+    ],
+
+    "B": [
+      "Achieved 100 percent portfolio codification (6 to 8 SKUs) across Supermaxi, Coral, Tia, and Santa Maria by end of 2018, including Secreto Inti, Bellows vodka, and Bellows rum.",
+      "Grew market share from 12 percent to 18 percent in Ecuador's national spirits segment in 4 years, reaching 2nd largest company in the category.",
+      "Grew company revenue from USD 1.5M to USD 3.0M in 4 years managing brand strategy, trade marketing, and distributor relationships at Alcalisa S.A.",
+      "Managed annual marketing and trade budget of USD 350,000 to USD 450,000 with full P&L ownership.",
+      "Led 12 to 15 point-of-sale activations per year: tastings, displays, nightclub activations, and national fair sampling across Ecuador.",
+      "Monitored monthly shopper data from Supermaxi and Coral dashboards: sales by SKU, rotation, and average ticket. Correlated Facebook Ads investment with retail sales peaks to guide budget allocation.",
+      "Launched Secreto Inti premium liqueur into more than 20 HORECA venues in 2015 (Hotel Quito, Casa Gangotena, Plaza Grande), then secured codification into Supermaxi in 2016. First time the chain accepted an on-trade validated niche product.",
+      "Grew brand awareness from 18 percent to 34 percent through consumer insight-driven campaigns after migration from traditional to digital media.",
+      "Trained more than 150 people per year: regional distributors, bartenders, and HORECA staff at 5-star hotels across Ecuador.",
+      "Christmas 2015 activation (Supermaxi): USD 800 Facebook Ads investment generated 18 percent sales uplift on Bellows whisky in December vs. prior year.",
+      "Carnaval 360 campaign 2016: 22 percent sales uplift during February and March vs. prior year. Investment: USD 1,200 in Facebook Ads and USD 26,000 in field activations across 4 provinces: Ambato, Guayaquil, Latacunga, and Quito.",
+      "Managed 12 direct reports and coordinated 3 agencies across a portfolio of 6 to 8 spirits SKUs: whisky, rum, vodka, and orange liqueur.",
+      "Secured exclusive distribution agreements in Shanghai and Moscow for 2 wine brands at GRC S.A., exceeding export target by 50 percent: from 4 projected containers per year to 6 closed, generating approximately USD 108,000 in annual revenue.",
+      "Led B2B consultative sales at Avanti IT SAS for public sector clients including COMFENALCO EPS, Alcaldía Mayor de Bogotá, and Alcaldía de Funza, aligning AI-powered digital solutions with citizen experience objectives.",
+      "Improved client satisfaction by 20 percent at Avanti IT SAS through conversational flow optimization and personalized interaction strategies.",
+      "Implemented COMFENALCO EPS chatbot (COVID-19): reduced physical consultation load by 80 percent and handled more than 50,000 patients with remote pre-diagnosis.",
+      "Managed Chatico chatbot for the Alcaldía Mayor de Bogotá: 575,134 autonomous conversations in 9 months, 95 percent resolved without human intervention."
+    ],
+
+    "C": [
+      "Manages and optimizes LinkedIn Ads campaigns for more than 300 B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives.",
+      "ThinkOnward campaign (March 2026, Latin America): USD 200 investment generated 198,752 impressions, reaching 84,129 unique professionals in Earth Sciences and Data Science. CPC USD 0.96, CPM USD 1.01, CTR 0.105 percent.",
+      "Conducts weekly meetings in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo) at Amazon and delivers monthly reports on tROAS, NTB Sales, and campaign optimizations for APAC premium brands.",
+      "Managed Amazon DSP programmatic campaigns for APAC premium brands including Midea, Narwal, Bedsure, Jackery, Modelones, and TCL, supporting 4 Global Account Executives.",
+      "Narwal (November 20 to December 21, 2025, APAC): improved tROAS from 1.28x to 3.28x, generating USD 100,000 in attributed sales in 30 days through DSP remarketing, video creative refresh, and impression frequency capping.",
+      "Modelones (Q3 2025, APAC): achieved number 1 position in the Nail Polish category on Amazon for Q3 and Q4 2025 through Amazon ecosystem market research and DSP strategy.",
+      "Designed funnel-based reporting format (awareness to consideration to conversion) adopted as internal standard by all new Account Executives in the CPC Team Colombia, reducing team report review time by 30 percent.",
+      "Conducts weekly meetings in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo) and delivers monthly reports on tROAS, NTB Sales, and campaign optimizations for APAC premium brands.",
+      "Managed annual paid media budget of USD 350,000 to USD 450,000 across Facebook Ads and digital channels for Ecuador's national spirits segment at Alcalisa S.A., migrating full investment from traditional media after Ley de Comunicacion prohibition.",
+      "Achieved 45 percent share of voice on social media in Ecuador's national spirits category, starting from zero in 2013.",
+      "Grew brand awareness from 18 percent to 34 percent in 4 years through performance campaigns on Meta Ads (Facebook and Instagram).",
+      "Christmas 2015 (Supermaxi, Ecuador): USD 800 Facebook Ads investment generated 18 percent sales uplift on Bellows whisky in December vs. prior year.",
+      "Carnaval 360 campaign 2016 (Ecuador): USD 1,200 Facebook Ads and USD 26,000 in field activations across 4 provinces generated 22 percent sales uplift in February and March vs. prior year.",
+      "Grew company revenue from USD 1.5M to USD 3.0M in 4 years leading brand strategy, trade marketing, and digital channel migration at Alcalisa S.A.",
+      "Grew market share from 12 percent to 18 percent in Ecuador's national spirits segment, reaching 2nd largest company in the category.",
+      "Reduced Google Ads CPC from USD 1.10 to USD 0.75 (32 percent reduction) in 4 months at GRC S.A. through negative keyword cleanup and time-zone-based scheduling for China and Russia.",
+      "Increased lead-to-commercial-contact conversion rate by 25 percent at GRC S.A. through landing page optimization and site extensions.",
+      "Achieved ROAS 4 to 1 on B2B Google Ads at GRC S.A. (target: 3 to 1) with a monthly budget of USD 1,500.",
+      "Exceeded export sales target by 50 percent at GRC S.A.: from 4 projected containers per year to 6 closed, generating approximately USD 108,000 in annual revenue.",
+      "Managed digital channel performance at Avanti IT SAS: Chatico chatbot (Alcaldía Mayor de Bogotá) handled 575,134 conversations in 9 months with 95 percent autonomous resolution rate.",
+      "Implemented first WhatsApp-based interactive voting system at the Alcaldía Mayor de Bogotá: 103,785 participatory budget votes in 60 days with real-time reporting.",
+      "Optimized COMFENALCO EPS chatbot during COVID-19: 80 percent reduction in physical consultation load, more than 50,000 patients handled with remote pre-diagnosis."
+    ]
+
+  },
+
+  "bullets_por_rol": {
+    "_instruccion": "Each section is labeled with its employer. Use each bullet ONLY under the matching employer in the CV. NEVER move a bullet to a different employer's section.",
+    "linkedin_teleperformance": {
+      "empresa": "Teleperformance (contract for LinkedIn Marketing Solutions)",
+      "mercado": "Latin America ONLY. NEVER write APAC or Singapore/Sydney/Tokyo for this role.",
+      "bullets": [
+        "Manages and optimizes LinkedIn Ads campaigns for more than 300 B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives.",
+        "ThinkOnward campaign (March 2026, Latin America): USD 200 investment generated 198,752 impressions, reaching 84,129 unique professionals in Earth Sciences and Data Science. CPC USD 0.96, CPM USD 1.01, CTR 0.105 percent."
+      ]
+    },
+    "amazon": {
+      "empresa": "Amazon, Colombia",
+      "mercado": "APAC markets ONLY. NEVER write Latin America for this role.",
+      "bullets": [
+        "Conducts weekly meetings in English with 4 Global Account Executives in APAC (Singapore, Sydney, Tokyo) and delivers monthly reports on tROAS, NTB Sales, and campaign optimizations for APAC premium brands.",
+        "Narwal (November 20 to December 21, 2025, APAC): improved tROAS from 1.28x to 3.28x, generating USD 100,000 in attributed sales in 30 days through DSP remarketing, video creative refresh, and impression frequency capping.",
+        "Modelones (Q3 2025, APAC): achieved number 1 position in the Nail Polish category on Amazon for Q3 and Q4 2025 through Amazon ecosystem market research and DSP strategy.",
+        "Designed funnel-based reporting format (awareness to consideration to conversion) adopted as internal standard by all new Account Executives in the CPC Team Colombia, reducing team report review time by 30 percent.",
+        "TCL Electronics (2025, APAC): supported NFL 2025 brand strategy with DSP display and contextual ad packages across the NFL season.",
+        "Managed Amazon DSP programmatic campaigns for APAC premium brands including Midea, Narwal, Bedsure, Jackery, Modelones, and TCL, supporting 4 Global Account Executives.",
+        "Transformed results presentations into commercial narratives crossing competitive data, share of voice, and market behavior, facilitating faster budget optimization decisions with Global Account Executives in APAC."
+      ]
+    },
+    "avanti": {
+      "empresa": "Avanti IT SAS",
+      "bullets": [
+        "Led B2B consultative sales for high-value public sector clients including COMFENALCO EPS, Alcaldia Mayor de Bogota, and Alcaldia de Funza, aligning AI-powered digital solutions with business objectives.",
+        "Managed Chatico chatbot for the Alcaldia Mayor de Bogota: 575,134 autonomous conversations in 9 months, 95 percent resolved without human intervention.",
+        "Implemented the first interactive voting system via WhatsApp for participatory budgets at the Alcaldia Mayor de Bogota: 103,785 votes in 60 days with real-time statistics.",
+        "Implemented COMFENALCO EPS chatbot during COVID-19: reduced physical consultation load by 80 percent and handled more than 50,000 patients with remote pre-diagnosis.",
+        "Improved client satisfaction by 20 percent through conversational flow optimization and personalized interaction strategies."
+      ]
+    },
+    "alcalisa": {
+      "empresa": "Alcalisa S.A.",
+      "bullets": [
+        "Grew company revenue from USD 1.5M to USD 3.0M in 4 years leading brand strategy, trade marketing, and digital channel migration.",
+        "Grew brand awareness from 18 percent to 34 percent by migrating full media investment from TV and radio to digital after Ecuador's Ley de Comunicacion prohibited alcohol advertising on traditional media.",
+        "Achieved 45 percent share of voice on social media in Ecuador's national spirits segment, starting from zero in 2013.",
+        "Grew market share from 12 percent to 18 percent in Ecuador's national spirits segment in 4 years, reaching 2nd largest company in the category.",
+        "Managed annual marketing budget of USD 350,000 to USD 450,000 with full P&L responsibility across brand, trade, and digital.",
+        "Led 12 to 15 point-of-sale activations per year. Carnaval 360 (2016): 22 percent sales uplift in February and March vs. prior year.",
+        "Launched Secreto Inti premium liqueur into more than 20 HORECA venues in 2015, then secured codification into Supermaxi in 2016.",
+        "Achieved 100 percent portfolio codification (6 to 8 SKUs) across Supermaxi, Coral, Tia, and Santa Maria by end of 2018.",
+        "Trained more than 150 people per year: regional distributors, bartenders, and HORECA staff at 5-star hotels.",
+        "Managed a team of 12 direct reports and coordinated 3 external agencies: digital, design and branding, and activations.",
+        "Implemented Power BI sales reporting integrating retail chain and distributor data, replacing manual Excel-based processes."
+      ]
+    },
+    "grc": {
+      "empresa": "GRC S.A.",
+      "bullets": [
+        "Exceeded export target by 50 percent: from 4 projected containers per year to 6 closed, generating approximately USD 108,000 in annual revenue.",
+        "Secured exclusive distribution agreements in Shanghai and Moscow for 2 of the 3 wine brands launched.",
+        "Reduced Google Ads CPC from USD 1.10 to USD 0.75 (32 percent reduction) in 4 months through negative keyword cleanup and time-zone-based scheduling for China and Russia.",
+        "Achieved ROAS 4 to 1 on B2B Google Ads (target: 3 to 1) with a monthly budget of USD 1,500.",
+        "Increased lead-to-commercial-contact conversion rate by 25 percent through landing page optimization and site extensions.",
+        "Created and positioned 3 Spanish wine brands for export to China and Russia: brand architecture, naming, packaging, storytelling, and B2B distributor strategy."
+      ]
+    }
   },
 
   "logros_adicionales": [

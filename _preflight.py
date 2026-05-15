@@ -64,6 +64,7 @@ agents = [
     "agents.pdf_generator",
     "agents.reporter",
     "agents.scraper",
+    "agents.applicator",
 ]
 agents_ok = True
 for mod in agents:
@@ -85,15 +86,33 @@ if pdfs:
 else:
     print(f"{FAIL} No PDFs found — run dry-run first")
 
-# 6. Apify config sanity
-print("\n6. APIFY CONFIG")
+# 6. Playwright / Applicator
+print("\n6. PLAYWRIGHT / APPLICATOR")
+try:
+    from playwright.sync_api import sync_playwright
+    print(f"{PASS} playwright importable")
+    playwright_ok = True
+except Exception as e:
+    print(f"{FAIL} playwright: {e} — ejecuta: playwright install chromium")
+    playwright_ok = False
+
+profile_dir = config.PLAYWRIGHT_USER_DATA_DIR
+profile_exists = os.path.isdir(profile_dir) and bool(os.listdir(profile_dir))
+if profile_exists:
+    print(f"{PASS} browser_profile: {profile_dir}")
+else:
+    print(f"  [WARN] browser_profile vacío o inexistente — ejecuta _setup_browser.py para inicializar sesión LinkedIn")
+    # No es FAIL — el perfil se crea en el primer run
+
+# 7. Apify config sanity
+print("\n7. APIFY CONFIG")
 print(f"{PASS} Actor ID:       {config.APIFY_ACTOR_ID}")
 print(f"{PASS} Max wait:       {config.APIFY_MAX_WAIT_S}s")
 print(f"{PASS} Poll interval:  {config.APIFY_POLL_S}s")
 
 # Summary
 print("\n=== SUMMARY ===")
-all_ok = key_ok and paths_ok and db_ok and agents_ok
+all_ok = key_ok and paths_ok and db_ok and agents_ok and playwright_ok
 if all_ok:
     print("ALL CHECKS PASSED — safe to connect Apify.")
 else:

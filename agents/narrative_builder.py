@@ -52,18 +52,19 @@ professional data (numbers, metrics, company names, dates) and write ATS-ready \
 bullet points in plain English.
 
 RULES:
-1. Every bullet must start with a strong action verb
-2. Every bullet must contain at least one specific number, metric, or percentage
-3. No filler phrases ("results-oriented", "passionate", "dynamic")
-4. Plain text only — no markdown, no asterisks, no bullet symbols
-5. Mirror the exact language of the TARGET_RAMA keywords
-6. Maximum 2 lines per bullet (keep it scannable for ATS parsers)
-7. Write in the same bilingual Spanish/English tone as a senior Latin American professional
-8. NEVER attribute total company revenue or total brand sales as the candidate's personal paid media ROI — only attribute metrics directly tied to campaigns the candidate managed
-9. MARKET ATTRIBUTION — respect strict geographic scope per role:
-   - LinkedIn/Teleperformance role (Feb 2026–Present): Latin America ONLY — NEVER write "APAC" for this role
-   - Amazon Campaign Planner role: APAC markets ONLY — NEVER write "Latin America" for this role
-   The LinkedIn AEs in Singapore/Sydney/Tokyo are supervisors she reports to, NOT the market she manages
+1. Every bullet must start with a strong action verb.
+2. Every bullet must contain at least one specific number, metric, or percentage.
+3. No filler phrases ("results-oriented", "passionate", "dynamic").
+4. Plain text only. No markdown, no asterisks, no bullet symbols.
+5. Mirror the exact language of the TARGET_RAMA keywords.
+6. Maximum 2 lines per bullet. Keep it scannable for ATS parsers.
+7. Write in the same bilingual Spanish/English tone as a senior Latin American professional.
+8. NEVER attribute total company revenue or total brand sales as the candidate's personal paid media ROI. Only attribute metrics directly tied to campaigns the candidate managed.
+9. MARKET ATTRIBUTION. Respect strict geographic scope per role:
+   LinkedIn/Teleperformance role (Feb 2026, Present): Latin America ONLY. NEVER write "APAC" for this role.
+   Amazon Campaign Planner role: APAC markets ONLY. NEVER write "Latin America" for this role.
+   The LinkedIn AEs in Singapore, Sydney, and Tokyo are supervisors she reports to. They are not the market she manages.
+10. USE ONLY DATA FROM THE SOURCE. Never extrapolate, invent, or reframe metrics. If a number does not appear explicitly in the candidate data for a given role, do not create it. Write only what is documented.
 
 OUTPUT: Return ONLY the bullet points, one per line, no headers, no explanations.\
 """
@@ -154,11 +155,23 @@ def build_narratives(rama: str | None = None) -> dict[str, str]:
 
 def get_bullets_for_cv(rama: str) -> str:
     """
-    Retorna bullets listos para inyectar en _cv_to_plain_text.
-    Llamado desde cv_rewriter antes del primer intento de reescritura.
+    Retorna bullets validados para inyectar en cv_rewriter.
+    Prioriza bullets_validados del JSON (sin LLM). Solo usa LLM como fallback.
     """
+    rama = rama.upper()
+    try:
+        narrativas = _load_narrativas()
+        validados = narrativas.get("bullets_validados", {})
+        if rama in validados and validados[rama]:
+            bullets = validados[rama]
+            print(f"[NarrativeBuilder] Rama {rama} — {len(bullets)} bullets validados (sin LLM)")
+            return "\n".join(bullets)
+    except Exception as e:
+        print(f"[NarrativeBuilder] Error leyendo bullets_validados: {e}")
+
+    print(f"[NarrativeBuilder] Rama {rama} — fallback a generación LLM")
     result = build_narratives(rama)
-    return result.get(rama.upper(), "")
+    return result.get(rama, "")
 
 
 # ── CLI / Test ─────────────────────────────────────────────────────────────────

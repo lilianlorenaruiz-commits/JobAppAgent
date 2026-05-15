@@ -561,41 +561,98 @@ def _extract_linkedin_job_info(page) -> dict:
                 except Exception:
                     continue
 
-        # 4. Descripción — estrategia multicapa (selectores CSS de LinkedIn cambian frecuentemente)
-        # 4a. JavaScript evaluation — más robusto que selectores CSS
+        # 4. Descripción — estrategia multicapa
+        # DIAGNÓSTICO 2026-05-15: LinkedIn usa class names hasheadas dinámicas.
+        # Ningún selector CSS histórico funciona. La descripción SÍ está en el DOM
+        # pero solo es alcanzable via texto ("About the job" es el marcador estable)
+        # o via page.inner_text('body') con parsing por marcadores de sección.
+
+        # 4a. XPath por texto — "About the job" / "Acerca del puesto" es estable
         if not info["descripcion"]:
             try:
                 desc = page.evaluate("""
                     () => {
-                        const candidates = [
-                            document.querySelector('#job-details'),
-                            document.querySelector('.jobs-description__content'),
-                            document.querySelector('.jobs-box__html-content'),
-                            document.querySelector('.jobs-description-content__text'),
-                            document.querySelector('article.jobs-description__container'),
-                            document.querySelector('.description__text'),
-                            document.querySelector('[data-test-id="job-description"]'),
-                            document.querySelector('.jobs-description'),
-                        ];
-                        for (const el of candidates) {
-                            if (el && el.innerText && el.innerText.trim().length > 100) {
-                                return el.innerText.trim();
+                        const markers = ['About the job', 'Acerca del puesto',
+                                         'About this job', 'Job description'];
+                        const xpath = "//*[" +
+                            markers.map(m =>
+                                "starts-with(normalize-space(.), '" + m + "')"
+                            ).join(" or ") +
+                        "]";
+                        const snap = document.evaluate(
+                            xpath, document, null,
+                            XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null
+                        );
+                        let best = '';
+                        for (let i = 0; i < snap.snapshotLength; i++) {
+                            const el = snap.snapshotItem(i);
+                            const txt = (el.innerText || el.textContent || '').trim();
+                            if (txt.length > best.length && txt.length < 8000) {
+                                best = txt;
                             }
                         }
-                        return '';
+                        // Quitar el encabezado "About the job" de la descripción
+                        for (const m of markers) {
+                            if (best.startsWith(m)) {
+                                best = best.slice(m.length).trim();
+                                break;
+                            }
+                        }
+                        return best;
                     }
                 """)
                 if desc and len(desc.strip()) > 100:
-                    info["descripcion"] = desc.strip()[:3000]
+                    # El JS elimina el marcador en el browser real; aquí lo quitamos
+                    # también para que los tests (donde el JS no se ejecuta) funcionen.
+                    desc_clean = desc.strip()
+                    for m in ["About the job", "Acerca del puesto",
+                               "About this job", "Job description"]:
+                        if desc_clean.startswith(m):
+                            desc_clean = desc_clean[len(m):].strip()
+                            break
+                    if len(desc_clean) > 100:
+                        info["descripcion"] = desc_clean[:3000]
             except Exception:
                 pass
 
-        # 4b. JSON-LD — LinkedIn incluye datos estructurados para SEO
+        # 4b. page.inner_text('body') con parsing por marcadores de sección
+        # Confirmado en diagnóstico: extrae 5000+ chars correctamente.
+        if not info["descripcion"]:
+            try:
+                body_text = page.evaluate("() => document.body.innerText")
+                if body_text:
+                    _START = ["About the job", "Acerca del puesto",
+                               "About this job", "Job description"]
+                    _END   = ["Show more jobs", "Mostrar más empleos",
+                               "People also viewed", "Personas que también",
+                               "LinkedIn members give", "You applied",
+                               "Solicitud enviada", "Similar jobs", "Empleos similares"]
+                    text = body_text
+                    for marker in _START:
+                        idx = text.find(marker)
+                        if idx != -1:
+                            text = text[idx + len(marker):].strip()
+                            break
+                    else:
+                        text = ""  # marcador no encontrado
+                    if text:
+                        for marker in _END:
+                            idx = text.find(marker)
+                            if idx > 100:
+                                text = text[:idx].strip()
+                                break
+                    if len(text) > 100:
+                        info["descripcion"] = text[:3000]
+            except Exception:
+                pass
+
+        # 4c. JSON-LD — LinkedIn incluye datos estructurados para SEO (fallback)
         if not info["descripcion"]:
             try:
                 ld_desc = page.evaluate("""
                     () => {
-                        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+                        const scripts = document.querySelectorAll(
+                            'script[type="application/ld+json"]');
                         for (const s of scripts) {
                             try {
                                 const data = JSON.parse(s.textContent);
@@ -616,27 +673,6 @@ def _extract_linkedin_job_info(page) -> dict:
                     info["descripcion"] = cleaned[:3000]
             except Exception:
                 pass
-
-        # 4c. Selectores CSS extendidos como último fallback
-        if not info["descripcion"]:
-            for sel in [
-                "#job-details",
-                ".jobs-description__content .jobs-box__html-content",
-                ".jobs-description-content__text--stretch",
-                ".jobs-description__content",
-                ".jobs-box__html-content",
-                ".jobs-description",
-                "article.jobs-description__container",
-            ]:
-                try:
-                    el = page.locator(sel).first
-                    if el.is_visible(timeout=2_000):
-                        txt = (el.text_content(timeout=3_000) or "").strip()
-                        if len(txt) > 100:
-                            info["descripcion"] = txt[:3000]
-                            break
-                except Exception:
-                    continue
 
     except Exception:
         pass

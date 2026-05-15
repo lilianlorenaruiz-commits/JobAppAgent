@@ -696,23 +696,31 @@ class TestExtractLinkedinJobInfo:
 
     def _mock_page_with_content(self, cargo="Product Manager",
                                  empresa="Falabella", desc="Descripción del cargo."):
-        page = MagicMock()
+        """Mock de página LinkedIn para tests de _extract_linkedin_job_info.
 
+        La nueva implementación usa page.evaluate() en 3 estrategias:
+          scroll[0], scroll[1] → None (ignorados)
+          XPath (4a)          → desc (si len > 100, se extrae; si no, se ignora)
+          body.innerText (4b) → "" (no tiene marker, falla limpiamente)
+          JSON-LD (4c)        → "" (no tiene datos, falla limpiamente)
+
+        cargo/empresa se extraen del título del tab (más estable que locators CSS).
+        """
+        page = MagicMock()
+        # Título del tab — usado en _parse_title_for_job_info
+        page.title.return_value = f"{cargo} | {empresa} | LinkedIn"
+
+        # Locator fallback (cargo/empresa) — solo si el título no lo da
         def _locator_side_effect(selector, **kwargs):
             loc = MagicMock()
-            loc.first.is_visible.return_value = True
-            if "h1" in selector:
-                loc.first.text_content.return_value = cargo
-            elif "company" in selector or "org-name" in selector:
-                loc.first.text_content.return_value = empresa
-            elif "description" in selector or "box__html" in selector:
-                loc.first.text_content.return_value = desc
-            else:
-                loc.first.is_visible.return_value = False
-                loc.first.text_content.return_value = ""
+            loc.first.is_visible.return_value = False
+            loc.first.text_content.return_value = ""
             return loc
-
         page.locator.side_effect = _locator_side_effect
+
+        # evaluate() calls en orden real de la implementación:
+        # [0] scroll, [1] scroll, [2] XPath→desc, [3] body→"", [4] JSON-LD→""
+        page.evaluate.side_effect = [None, None, desc, "", ""]
         return page
 
     def test_returns_dict_with_three_keys(self):
@@ -803,15 +811,91 @@ class TestExtractLinkedinJobInfo:
         loc = MagicMock()
         loc.first.is_visible.return_value = False
         page.locator.return_value = loc
-        # La impl hace 2 evaluate() de scroll antes de la extracción de descripción.
+        # La impl hace 2 evaluate() de scroll + 3 de extracción (XPath, body, JSON-LD).
         # side_effect[0,1] = scroll calls (return valor ignorado)
-        # side_effect[2]   = JS description → vacío (simula fallo)
-        # side_effect[3]   = JSON-LD description → texto largo
-        page.evaluate.side_effect = [None, None, "", _long_desc]
+        # side_effect[2]   = XPath extraction → vacío (simula fallo)
+        # side_effect[3]   = body.innerText → vacío (sin marker "About the job")
+        # side_effect[4]   = JSON-LD → texto largo
+        page.evaluate.side_effect = [None, None, "", "", _long_desc]
 
         result = _extract_linkedin_job_info(page)
         assert len(result["descripcion"]) > 100, "descripcion debe extraerse via JSON-LD cuando JS falla"
         assert "roadmap" in result["descripcion"]
+
+    def test_extracts_descripcion_via_xpath_about_the_job(self):
+        """4a: XPath por texto 'About the job' extrae descripción aunque LinkedIn
+        use class names hasheadas dinámicas.
+
+        Diagnóstico 2026-05-15: ningún selector CSS histórico existe en el DOM real
+        de LinkedIn. El marcador de texto 'About the job' / 'Acerca del puesto'
+        SÍ es estable y permite localizar el elemento con XPath.
+        """
+        from agents.applicator import _extract_linkedin_job_info
+
+        _jd_content = (
+            "We are looking for a Social Media Analyst with experience in paid campaigns. "
+            "Key Responsibilities: manage Meta, TikTok, Google Ads. "
+            "Requirements: B2 English, 2+ years in digital agencies. "
+        )
+        _desc_with_marker = "About the job\n\n" + _jd_content
+
+        page = MagicMock()
+        page.title.return_value = "Social Analyst | Publicis Global Delivery (PGD) | LinkedIn"
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+
+        # scroll[0], scroll[1], XPath retorna el texto con marcador
+        page.evaluate.side_effect = [None, None, _desc_with_marker]
+
+        result = _extract_linkedin_job_info(page)
+        assert len(result["descripcion"]) > 100, (
+            "XPath debe extraer descripción via marcador 'About the job'"
+        )
+        # El marcador debe ser eliminado — la descripción empieza en el contenido real
+        assert "About the job" not in result["descripcion"], (
+            "El marcador 'About the job' debe eliminarse del texto final"
+        )
+        assert "Social Media Analyst" in result["descripcion"]
+
+    def test_extracts_descripcion_via_body_innertext_parsing(self):
+        """4b: body.innerText con parsing por marcadores extrae descripción completa.
+
+        Diagnóstico 2026-05-15: page.evaluate('document.body.innerText') retorna
+        5000+ chars incluyendo la descripción. Se busca el bloque entre
+        'About the job' (inicio) y 'Show more jobs' / 'People also viewed' (fin).
+        """
+        from agents.applicator import _extract_linkedin_job_info
+
+        _jd = (
+            "We are looking for a Social Media Analyst with experience managing "
+            "paid campaigns on Meta, TikTok and Google Ads. "
+            "Requirements: B2 English, 2 years agency experience. "
+            "We offer hybrid work and competitive salary in Bogota. "
+        )
+        _body = (
+            "Social Analyst\nPublicis Global Delivery (PGD)\n"
+            "About the job\n\n"
+            + _jd * 2
+            + "\nPeople also viewed\nOther job listings here..."
+        )
+
+        page = MagicMock()
+        page.title.return_value = "Social Analyst | Publicis | LinkedIn"
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+
+        # scroll[0], scroll[1], XPath falla (""), body.innerText retorna _body
+        page.evaluate.side_effect = [None, None, "", _body]
+
+        result = _extract_linkedin_job_info(page)
+        assert len(result["descripcion"]) > 100, (
+            "body.innerText debe extraer descripción via marcadores de sección"
+        )
+        # El bloque debe terminar antes de "People also viewed"
+        assert "People also viewed" not in result["descripcion"]
+        assert "Social Media Analyst" in result["descripcion"]
 
 
 # ── Ciclo 30: _parse_title_for_job_info + extracción robusta ─────────────────

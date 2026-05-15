@@ -7,7 +7,7 @@
 
 ## Estado actual del proyecto
 
-**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 204/204 tests GREEN**
+**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 226/226 tests GREEN**
 
 | Canal | Estado | Smoke test |
 |---|---|---|
@@ -77,25 +77,27 @@ Si ya fue aplicado → retorna `enviado=True` sin reenviar.
 
 ---
 
-## Test Suite — 186 tests
+## Test Suite — 226 tests
 
 ```bash
-python -m pytest -q    # → 204 passed
+python -m pytest -q    # → 226 passed
 ```
 
 | Archivo | Tests | Cubre |
 |---|---|---|
-| `test_applicator_canal_a.py` | 46 | Canal A + smart fill + candidate_profile |
+| `test_applicator_canal_a.py` | 53 | Canal A + smart fill + candidate_profile + _extract_linkedin_job_info |
 | `test_applicator_canal_b.py` | 11 | Canal B |
 | `test_applicator_controlled.py` | 29 | Pre-producción checklist |
 | `test_applicator_v2.py` | 12 | Canal C email body |
 | `test_applicator.py` | 17 | Canal detection |
 | `test_telegram_hitl.py` | 16 | HITL wait_for_approval |
 | `test_cv_rewriter.py` | 37 | CV rewriting reglas |
+| `test_cv_rewriter_unit.py` | 15 | CV rewriting unidad (ciclo 28) |
 | `test_narrative_builder.py` | 13 | Bullets validados |
 | `test_pdf_generator.py` | 10 | PDF 2 páginas |
 | `test_ats_auditor.py` | 8 | ATS score |
 | `test_pipeline.py` | 7 | End-to-end dry-run |
+| `test_config_hitl.py` | 2 | HITL timeout config |
 
 ---
 
@@ -111,13 +113,25 @@ python -m pytest -q    # → 204 passed
 
 ---
 
+## Bugs post-smoke-test 2026-05-14 — CORREGIDOS
+
+| Bug | Severidad | Fix | Commit |
+|---|---|---|---|
+| BUG-001: Salary field recibía texto, LinkedIn esperaba decimal | CRÍTICO | `_PROFILE_KEYWORD_RULES` → `salary_cop_monthly` ("6500000") | `784d982` |
+| BUG-003: HITL timeout 5 min insuficiente (~3 min formulario + 2 min revisión) | MEDIO | `HITL_TIMEOUT_S`: 300 → 600 | `51e58c0` |
+| BUG-004: No extraía cargo/empresa/JD de la URL antes de aplicar | MEDIO | `_extract_linkedin_job_info(page)` nueva función con 7 tests | `29fdec3` |
+| BUG-002: Smoke test usaba PDF estático (Rappi) sin adaptar al cargo | CRÍTICO | `_smoke_canal_a.py` pipeline completo: scrape → rewrite → generate → apply | `d5a0da9` |
+
+---
+
 ## candidate_profile.json — IMPLEMENTADO (Ciclo 27)
 
 Repositorio de respuestas estables de Lorena en `config/candidate_profile.json`:
 
 ```json
 {
-  "salary_text":               "6.500.000 COP / 2.300 USD mensuales",
+  "salary_text":               "6.500.000 COP / 2.300 USD mensuales",  // SOLO para referencia — NO usar en formularios
+  "salary_cop_monthly":        "6500000",  // campo numérico LinkedIn — BUG-001
   "city":                      "Bogotá D.C., Colombia",
   "willing_to_travel":         "Sí",
   "willing_to_relocate":       "No",

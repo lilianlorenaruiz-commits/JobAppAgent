@@ -293,6 +293,134 @@ def _fill_free_text_fields(page, cv_text: str, job_description: str) -> int:
     return filled
 
 
+def _best_matching_option(answer: str, options: list) -> str:
+    """
+    Encuentra la opción de un dropdown que mejor coincide con `answer`.
+    Estrategia:
+      1. Exact match (case-insensitive)
+      2. Partial match
+      3. Sí/No/Yes mapping
+      4. Primera opción no vacía como fallback
+    """
+    answer_lower = answer.lower().strip()
+    # 1. Exact
+    for opt in options:
+        if opt.lower().strip() == answer_lower:
+            return opt
+    # 2. Partial
+    for opt in options:
+        if answer_lower in opt.lower() or opt.lower() in answer_lower:
+            return opt
+    # 3. Affirmative / negative
+    affirmatives = {"sí", "si", "yes", "1", "true", "c1", "c2", "b2", "b1"}
+    if any(a in answer_lower for a in affirmatives):
+        for opt in options:
+            if opt.lower().strip() in ("yes", "sí", "si"):
+                return opt
+    if answer_lower in ("no", "0", "false"):
+        for opt in options:
+            if opt.lower().strip() == "no":
+                return opt
+    # 4. Primer opción disponible
+    return options[0] if options else ""
+
+
+def _fill_select_fields(page, cv_text: str, job_description: str) -> int:
+    """
+    Detecta y rellena campos <select> (dropdown) visibles en LinkedIn Easy Apply.
+
+    LinkedIn usa <select> nativos para preguntas adicionales como:
+    - "¿Cuentas con nivel de inglés B2?" → Yes / No
+    - "¿Tienes disponibilidad para viajar?" → Sí / No
+
+    Estrategia: profile match → Claude con opciones disponibles → primera opción.
+    Nunca lanza excepción.
+    """
+    filled = 0
+    try:
+        selects = page.locator("select").all()
+        for sel_el in selects:
+            try:
+                if not sel_el.is_visible(timeout=800):
+                    continue
+                # Obtener opciones disponibles (excluir placeholder vacío)
+                option_els = sel_el.locator("option").all()
+                options = []
+                for o in option_els:
+                    txt = (o.text_content() or "").strip()
+                    if txt and txt.lower() not in {
+                        "selecciona una opción", "select an option",
+                        "seleccionar", "select", "--", "",
+                    }:
+                        options.append(txt)
+                if not options:
+                    continue
+
+                # Skip si ya tiene una opción seleccionada (no es el placeholder)
+                try:
+                    current = sel_el.input_value() or ""
+                    # Si el value actual no es el placeholder, ya está llenado
+                    if current and current not in {"", "0", "null"}:
+                        placeholder_texts = {
+                            "selecciona una opción", "select an option",
+                            "seleccionar", "select",
+                        }
+                        # Obtener texto de la opción actualmente seleccionada
+                        current_text = page.evaluate(
+                            "el => el.options[el.selectedIndex]?.text || ''",
+                            sel_el.element_handle(),
+                        )
+                        if current_text and current_text.lower().strip() not in placeholder_texts:
+                            continue  # ya llenado
+                except Exception:
+                    pass
+
+                # Obtener la pregunta asociada al select
+                question = _get_field_question(page, sel_el)
+                if not question:
+                    question = ""  # Claude usará las opciones como contexto
+
+                # 1. Intentar match con perfil del candidato
+                profile = _load_candidate_profile()
+                profile_answer = _match_profile_question(question, profile)
+
+                # 2. Si no hay match de perfil, usar Claude con las opciones disponibles
+                if not profile_answer and anthropic is not None:
+                    opts_str = " / ".join(options)
+                    prompt = (
+                        f"You are Lorena Ruiz filling a job application form. "
+                        f"Choose EXACTLY ONE of these options for the question below.\n\n"
+                        f"QUESTION: {question or '(sin texto)'}\n"
+                        f"OPTIONS: {opts_str}\n\n"
+                        f"CV context:\n{cv_text[:1000]}\n\n"
+                        f"Respond with ONLY the exact option text, nothing else."
+                    )
+                    try:
+                        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+                        resp = client.messages.create(
+                            model=config.MODEL_FAST,
+                            max_tokens=30,
+                            messages=[{"role": "user", "content": prompt}],
+                        )
+                        profile_answer = resp.content[0].text.strip()
+                    except Exception:
+                        profile_answer = ""
+
+                # 3. Encontrar la opción más cercana
+                best = _best_matching_option(profile_answer or options[0], options)
+                if best:
+                    sel_el.select_option(label=best)
+                    _human_pause(0.3, 0.6)
+                    print(f"  [Applicator-A] Dropdown llenado: {question[:50]!r} → {best!r}")
+                    filled += 1
+
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return filled
+
+
 # Valores de cargo/empresa que indican que no se extrajo info real del JD
 _PLACEHOLDER_VALUES = {"cargo linkedin", "empresa linkedin", ""}
 
@@ -697,6 +825,9 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
 
                 # c) Smart fill: campos de texto libre con Claude
                 _fill_free_text_fields(page, cv_text, job_description)
+
+                # c2) Smart fill: dropdowns / <select> con perfil + Claude
+                _fill_select_fields(page, cv_text, job_description)
 
                 # d) Detectar si hay el botón Submit FINAL (último paso)
                 # "Submit application" / "Enviar solicitud" aparece en la pantalla de confirmación.

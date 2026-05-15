@@ -994,3 +994,130 @@ class TestMaybeUploadCvHiddenInput:
             _maybe_upload_cv(page, pdf_path)  # no debe lanzar
         finally:
             os.unlink(pdf_path)
+
+
+# ── Ciclo 36: _fill_select_fields + _best_matching_option — dropdowns ────────
+
+class TestBestMatchingOption:
+    """_best_matching_option elige la opción más cercana a la respuesta."""
+
+    def test_exact_match(self):
+        from agents.applicator import _best_matching_option
+        assert _best_matching_option("Yes", ["Yes", "No"]) == "Yes"
+
+    def test_exact_match_case_insensitive(self):
+        from agents.applicator import _best_matching_option
+        assert _best_matching_option("yes", ["Yes", "No"]) == "Yes"
+
+    def test_affirmative_maps_to_yes(self):
+        """Respuesta 'C2' (nivel de inglés alto) debe mapearse a 'Yes' en dropdown Sí/No."""
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("C2", ["Yes", "No"])
+        assert result == "Yes"
+
+    def test_si_maps_to_yes(self):
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("Sí", ["Yes", "No"])
+        assert result == "Yes"
+
+    def test_no_maps_to_no(self):
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("No", ["Yes", "No"])
+        assert result == "No"
+
+    def test_partial_match(self):
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("Tiempo completo", ["Tiempo completo", "Medio tiempo"])
+        assert result == "Tiempo completo"
+
+    def test_returns_first_option_when_no_match(self):
+        """Si no hay match claro, devuelve la primera opción disponible."""
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("???", ["OpcionA", "OpcionB"])
+        assert result == "OpcionA"
+
+    def test_empty_options_returns_empty(self):
+        from agents.applicator import _best_matching_option
+        result = _best_matching_option("Yes", [])
+        assert result == ""
+
+
+class TestFillSelectFields:
+    """_fill_select_fields detecta y llena <select> dropdowns en LinkedIn Easy Apply."""
+
+    def _page_with_select(self, question_text: str, options: list, current_value: str = ""):
+        """Mock de página con un <select> visible que tiene las opciones dadas."""
+        page = MagicMock()
+
+        # Mock del <select> element
+        select_el = MagicMock()
+        select_el.is_visible.return_value = True
+        select_el.input_value.return_value = current_value
+
+        # Mock de opciones del select
+        def make_option(text):
+            opt = MagicMock()
+            opt.text_content.return_value = text
+            return opt
+
+        option_mocks = [make_option(o) for o in options]
+
+        # page.locator("select").all() → [select_el]
+        # select_el.locator("option").all() → option_mocks
+        def locator_side(sel, **kw):
+            loc = MagicMock()
+            if sel == "select":
+                loc.all.return_value = [select_el]
+            elif sel == "option":
+                loc.all.return_value = option_mocks
+            else:
+                loc.all.return_value = []
+                loc.first.is_visible.return_value = False
+            return loc
+
+        page.locator.side_effect = locator_side
+        select_el.locator.side_effect = locator_side
+
+        # _get_field_question returns the question text
+        # page.evaluate returns current option text (for skip-if-already-filled check)
+        page.evaluate.return_value = ""  # no selected option yet
+
+        return page, select_el
+
+    def test_fills_yes_no_dropdown_english_question(self):
+        """¿Cuentas con nivel de inglés B2? → debe seleccionar 'Yes' para Lorena (C2)."""
+        from agents.applicator import _fill_select_fields
+        page, select_el = self._page_with_select(
+            "¿Cuentas con un nivel de inglés B2 en adelante?",
+            ["Yes", "No"],
+        )
+        # Mockear _get_field_question para retornar la pregunta
+        with patch("agents.applicator._get_field_question",
+                   return_value="¿Cuentas con un nivel de inglés B2 en adelante?"), \
+             patch("agents.applicator._load_candidate_profile",
+                   return_value={"english_level": "C2 - Proficiencia completa"}):
+            _fill_select_fields(page, "CV text", "JD text")
+        # Debe haber llamado select_option con "Yes"
+        select_el.select_option.assert_called_once()
+        call_args = select_el.select_option.call_args
+        assert call_args[1].get("label") == "Yes" or (
+            call_args[0] and call_args[0][0] == "Yes"
+        ), f"Expected 'Yes' but got: {call_args}"
+
+    def test_does_not_fill_when_no_selects(self):
+        """Si no hay <select> en la página, retorna 0 sin errores."""
+        from agents.applicator import _fill_select_fields
+        page = MagicMock()
+        loc = MagicMock()
+        loc.all.return_value = []
+        page.locator.return_value = loc
+        result = _fill_select_fields(page, "CV", "JD")
+        assert result == 0
+
+    def test_does_not_raise_on_exception(self):
+        """Si Playwright lanza error, _fill_select_fields no propaga la excepción."""
+        from agents.applicator import _fill_select_fields
+        page = MagicMock()
+        page.locator.side_effect = Exception("Playwright error")
+        result = _fill_select_fields(page, "CV", "JD")
+        assert result == 0

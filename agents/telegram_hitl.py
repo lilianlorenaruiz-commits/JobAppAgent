@@ -239,6 +239,27 @@ def send_screenshot_for_approval_sync(image_path: str, job: dict,
         print(f"[HITL] send_screenshot_for_approval_sync error: {e}")
 
 
+def send_message_sync(text: str) -> None:
+    """
+    Envía un mensaje de texto plano a Telegram usando urllib (sin asyncio).
+    Seguro para llamar desde dentro del context manager de Playwright sync API.
+    Nunca propaga excepciones.
+    """
+    try:
+        token, chat_id = _require_telegram()
+        base_url = f"https://api.telegram.org/bot{token}"
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text":    text,
+        }).encode()
+        req = urllib.request.Request(f"{base_url}/sendMessage", data=data)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+        print(f"[HITL] Mensaje enviado: {text[:60]!r}")
+    except Exception as e:
+        print(f"[HITL] send_message_sync error: {e}")
+
+
 # ── Polling HITL ───────────────────────────────────────────────────────────────
 
 def _get_latest_update_id(base_url: str) -> int | None:

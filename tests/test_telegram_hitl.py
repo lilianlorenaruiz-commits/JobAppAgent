@@ -169,3 +169,71 @@ class TestWaitForApproval:
         ):
             result = wait_for_approval(timeout_s=1)
         assert result is False
+
+
+# ── send_message_sync ─────────────────────────────────────────────────────────
+
+class TestSendMessageSync:
+    """send_message_sync envía texto plano a Telegram vía urllib (sin asyncio).
+
+    Escenario real probado 2026-05-14: Lorena respondió NO en Telegram durante
+    el smoke test de Canal A. El agente debe notificar la cancelación de vuelta
+    sin propagar excepciones (safe dentro del contexto de Playwright sync).
+    """
+
+    def test_calls_sendmessage_endpoint(self):
+        """Verifica que se llama al endpoint /sendMessage de Telegram."""
+        from agents.telegram_hitl import send_message_sync
+        from unittest.mock import MagicMock, patch
+
+        fake_resp = MagicMock()
+        fake_resp.__enter__ = lambda s: s
+        fake_resp.__exit__ = MagicMock(return_value=False)
+        fake_resp.read.return_value = b'{"ok":true}'
+
+        with (
+            patch("agents.telegram_hitl.config.TELEGRAM_TOKEN", "tok123"),
+            patch("agents.telegram_hitl.config.TELEGRAM_CHAT_ID", "456"),
+            patch("agents.telegram_hitl.urllib.request.urlopen", return_value=fake_resp) as mock_open,
+        ):
+            send_message_sync("❌ Aplicación CANCELADA\nCargo: PM\nEmpresa: Acme")
+
+        called_url = mock_open.call_args[0][0].full_url
+        assert "/sendMessage" in called_url
+
+    def test_text_appears_in_request_body(self):
+        """El texto del mensaje se incluye en el cuerpo de la petición."""
+        from agents.telegram_hitl import send_message_sync
+        from unittest.mock import MagicMock, patch
+
+        captured = {}
+        fake_resp = MagicMock()
+        fake_resp.__enter__ = lambda s: s
+        fake_resp.__exit__ = MagicMock(return_value=False)
+        fake_resp.read.return_value = b'{"ok":true}'
+
+        def capture_req(req, timeout=None):
+            captured["body"] = req.data.decode("utf-8") if req.data else ""
+            return fake_resp
+
+        with (
+            patch("agents.telegram_hitl.config.TELEGRAM_TOKEN", "tok123"),
+            patch("agents.telegram_hitl.config.TELEGRAM_CHAT_ID", "456"),
+            patch("agents.telegram_hitl.urllib.request.urlopen", side_effect=capture_req),
+        ):
+            send_message_sync("Cancelado: Social Analyst @ PGD")
+
+        assert "Cancelado" in captured["body"]
+
+    def test_never_raises_on_network_error(self):
+        """send_message_sync silencia errores de red — no propaga excepciones."""
+        from agents.telegram_hitl import send_message_sync
+        from unittest.mock import patch
+
+        with (
+            patch("agents.telegram_hitl.config.TELEGRAM_TOKEN", "tok123"),
+            patch("agents.telegram_hitl.config.TELEGRAM_CHAT_ID", "456"),
+            patch("agents.telegram_hitl.urllib.request.urlopen",
+                  side_effect=OSError("connection refused")),
+        ):
+            send_message_sync("este mensaje fallará en red")  # no debe lanzar

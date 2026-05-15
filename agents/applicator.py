@@ -41,6 +41,7 @@ try:
         send_cv_ready_browser,
         send_email_body,
         send_screenshot_for_approval_sync,
+        send_message_sync,
         wait_for_approval,
     )
 except ImportError:
@@ -50,7 +51,9 @@ except ImportError:
         pass
     def send_email_body(job, body_text):  # noqa: E301
         pass
-    def send_screenshot_for_approval_sync(image_path, job):  # noqa: E301
+    def send_screenshot_for_approval_sync(image_path, job, extra_msg=""):  # noqa: E301
+        pass
+    def send_message_sync(text):  # noqa: E301
         pass
     def wait_for_approval(timeout_s=300):  # noqa: E301
         return True
@@ -894,15 +897,24 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                                 "mensaje": f"Easy Apply enviado: {cargo} @ {empresa}",
                             }
                         else:
-                            print("  [Applicator-A] HITL cancelado — browser abierto para completar manualmente.")
+                            # NO o timeout: cancelar limpiamente y notificar
+                            print("  [Applicator-A] HITL rechazado — cerrando aplicación.")
+                            send_message_sync(
+                                f"❌ Aplicación CANCELADA\n"
+                                f"Cargo: {cargo}\n"
+                                f"Empresa: {empresa}\n"
+                                f"El formulario fue cerrado sin enviar."
+                            )
                             try:
-                                page.wait_for_event("close", timeout=config.HITL_TIMEOUT_S * 1_000)
+                                # Cerrar modal Easy Apply con Escape
+                                page.keyboard.press("Escape")
+                                _human_pause(0.5, 1.0)
                             except Exception:
                                 pass
                             ctx.close()
                             return {
                                 "enviado": False, "canal": "A", "url": url,
-                                "mensaje": "HITL cancelado — completar manualmente",
+                                "mensaje": f"HITL rechazado por Lorena — {cargo} @ {empresa}",
                             }
                     else:
                         # Sin HITL: submit directo

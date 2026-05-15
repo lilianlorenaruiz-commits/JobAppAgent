@@ -139,8 +139,15 @@ class TestLinkedInCorrectData:
 
     def test_linkedin_has_latin_america(self, cv_text_grupo_red):
         section = _linkedin_section(cv_text_grupo_red)
-        assert "Latin America" in section or "LATAM" in section, (
-            "La sección LinkedIn no menciona Latin America.\n"
+        # El CV puede redactarse en inglés ("Latin America"/"LATAM") o en español
+        # ("América Latina"/"Latinoamérica") según el idioma del JD detectado (BUG-B fix).
+        has_region = any(
+            kw.lower() in section.lower()
+            for kw in ["latin america", "latam", "américa latina",
+                        "america latina", "latinoamérica", "latinoamerica"]
+        )
+        assert has_region, (
+            "La sección LinkedIn no menciona Latin America ni América Latina.\n"
             f"Sección:\n{section}"
         )
 

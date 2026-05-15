@@ -803,8 +803,11 @@ class TestExtractLinkedinJobInfo:
         loc = MagicMock()
         loc.first.is_visible.return_value = False
         page.locator.return_value = loc
-        # Primer call (JS evaluation) falla con texto corto; segundo (JSON-LD) tiene desc
-        page.evaluate.side_effect = ["", _long_desc]
+        # La impl hace 2 evaluate() de scroll antes de la extracción de descripción.
+        # side_effect[0,1] = scroll calls (return valor ignorado)
+        # side_effect[2]   = JS description → vacío (simula fallo)
+        # side_effect[3]   = JSON-LD description → texto largo
+        page.evaluate.side_effect = [None, None, "", _long_desc]
 
         result = _extract_linkedin_job_info(page)
         assert len(result["descripcion"]) > 100, "descripcion debe extraerse via JSON-LD cuando JS falla"
@@ -1046,41 +1049,35 @@ class TestFillSelectFields:
     """_fill_select_fields detecta y llena <select> dropdowns en LinkedIn Easy Apply."""
 
     def _page_with_select(self, question_text: str, options: list, current_value: str = ""):
-        """Mock de página con un <select> visible que tiene las opciones dadas."""
+        """Mock de página con un <select> (oculto, al estilo LinkedIn) con las opciones dadas.
+
+        _fill_select_fields llama evaluate() dos veces por select:
+          1ra llamada → lista de opciones como strings
+          2da llamada → texto de la opción actualmente seleccionada ('' = placeholder)
+        """
         page = MagicMock()
 
         # Mock del <select> element
         select_el = MagicMock()
-        select_el.is_visible.return_value = True
-        select_el.input_value.return_value = current_value
+        # LinkedIn oculta el <select> nativo → is_visible() = False (no se usa en la impl)
+        select_el.is_visible.return_value = False
 
-        # Mock de opciones del select
-        def make_option(text):
-            opt = MagicMock()
-            opt.text_content.return_value = text
-            return opt
-
-        option_mocks = [make_option(o) for o in options]
+        # evaluate() se llama 2 veces: 1ª → opciones, 2ª → label actual
+        current_label = current_value if current_value.lower() not in {
+            "selecciona una opción", "select an option", "seleccionar", "select", "--", ""
+        } else ""
+        select_el.evaluate.side_effect = [options, current_label]
 
         # page.locator("select").all() → [select_el]
-        # select_el.locator("option").all() → option_mocks
         def locator_side(sel, **kw):
             loc = MagicMock()
             if sel == "select":
                 loc.all.return_value = [select_el]
-            elif sel == "option":
-                loc.all.return_value = option_mocks
             else:
                 loc.all.return_value = []
-                loc.first.is_visible.return_value = False
             return loc
 
         page.locator.side_effect = locator_side
-        select_el.locator.side_effect = locator_side
-
-        # _get_field_question returns the question text
-        # page.evaluate returns current option text (for skip-if-already-filled check)
-        page.evaluate.return_value = ""  # no selected option yet
 
         return page, select_el
 

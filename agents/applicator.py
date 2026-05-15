@@ -327,62 +327,72 @@ def _best_matching_option(answer: str, options: list) -> str:
 
 def _fill_select_fields(page, cv_text: str, job_description: str) -> int:
     """
-    Detecta y rellena campos <select> (dropdown) visibles en LinkedIn Easy Apply.
+    Detecta y rellena campos <select> (dropdown) en LinkedIn Easy Apply.
 
-    LinkedIn usa <select> nativos para preguntas adicionales como:
-    - "¿Cuentas con nivel de inglés B2?" → Yes / No
-    - "¿Tienes disponibilidad para viajar?" → Sí / No
+    LinkedIn usa <select> OCULTOS con UI custom encima (display:none).
+    → NO usar is_visible() — usar evaluate() para acceder al DOM directo.
+    → Intentar select_option() y como fallback manipulación JS directa.
 
-    Estrategia: profile match → Claude con opciones disponibles → primera opción.
+    Estrategia: profile match → Claude con opciones → primera opción.
     Nunca lanza excepción.
     """
+    _PLACEHOLDER_LABELS = {
+        "selecciona una opción", "select an option",
+        "seleccionar", "select", "--", "",
+    }
     filled = 0
     try:
         selects = page.locator("select").all()
         for sel_el in selects:
             try:
-                if not sel_el.is_visible(timeout=800):
-                    continue
-                # Obtener opciones disponibles (excluir placeholder vacío)
-                option_els = sel_el.locator("option").all()
-                options = []
-                for o in option_els:
-                    txt = (o.text_content() or "").strip()
-                    if txt and txt.lower() not in {
-                        "selecciona una opción", "select an option",
-                        "seleccionar", "select", "--", "",
-                    }:
-                        options.append(txt)
+                # Obtener opciones via JS (funciona aunque el select esté oculto)
+                options = sel_el.evaluate("""
+                    el => Array.from(el.options)
+                        .map(o => o.text.trim())
+                        .filter(t => t.length > 0)
+                """)
                 if not options:
                     continue
 
-                # Skip si ya tiene una opción seleccionada (no es el placeholder)
-                try:
-                    current = sel_el.input_value() or ""
-                    # Si el value actual no es el placeholder, ya está llenado
-                    if current and current not in {"", "0", "null"}:
-                        placeholder_texts = {
-                            "selecciona una opción", "select an option",
-                            "seleccionar", "select",
-                        }
-                        # Obtener texto de la opción actualmente seleccionada
-                        current_text = page.evaluate(
-                            "el => el.options[el.selectedIndex]?.text || ''",
-                            sel_el.element_handle(),
-                        )
-                        if current_text and current_text.lower().strip() not in placeholder_texts:
-                            continue  # ya llenado
-                except Exception:
-                    pass
+                real_options = [o for o in options if o.lower() not in _PLACEHOLDER_LABELS]
+                if not real_options:
+                    continue
 
-                # Obtener la pregunta asociada al select
+                # Skip si ya hay una opción real seleccionada
+                current_label = sel_el.evaluate(
+                    "el => el.options[el.selectedIndex]?.text?.trim() || ''"
+                )
+                if current_label.lower() not in _PLACEHOLDER_LABELS and current_label:
+                    continue
+
+                # Obtener la pregunta del label asociado
                 question = _get_field_question(page, sel_el)
-                if not question:
-                    question = ""  # Claude usará las opciones como contexto
 
-                # 1. Intentar match con perfil del candidato
+                # 1. Match con perfil candidata
                 profile = _load_candidate_profile()
-                profile_answer = _match_profile_question(question, profile)
+                profile_answer = _match_profile_question(question or "", profile)
+
+                # 2. Claude si no hay match de perfil
+                if not profile_answer and anthropic is not None:
+                    opts_str = " / ".join(real_options[:6])
+                    prompt = (
+                        f"You are Lorena Ruiz filling a job application form. "
+                        f"Choose EXACTLY ONE of the OPTIONS for the QUESTION.\n\n"
+                        f"QUESTION: {question or '(not visible)'}\n"
+                        f"OPTIONS: {opts_str}\n\n"
+                        f"CV context:\n{cv_text[:800]}\n\n"
+                        f"Respond ONLY with the exact option text, nothing else."
+                    )
+                    try:
+                        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+                        resp = client.messages.create(
+                            model=config.MODEL_FAST,
+                            max_tokens=30,
+                            messages=[{"role": "user", "content": prompt}],
+                        )
+                        profile_answer = resp.content[0].text.strip()
+                    except Exception:
+                        profile_answer = ""
 
                 # 2. Si no hay match de perfil, usar Claude con las opciones disponibles
                 if not profile_answer and anthropic is not None:
@@ -407,9 +417,40 @@ def _fill_select_fields(page, cv_text: str, job_description: str) -> int:
                         profile_answer = ""
 
                 # 3. Encontrar la opción más cercana
-                best = _best_matching_option(profile_answer or options[0], options)
-                if best:
+                best = _best_matching_option(
+                    profile_answer or real_options[0], real_options
+                )
+                if not best:
+                    continue
+
+                # Intento A: select_option() de Playwright
+                selected = False
+                try:
                     sel_el.select_option(label=best)
+                    selected = True
+                except Exception:
+                    pass
+
+                # Intento B: manipulación JS directa (funciona en selects ocultos)
+                if not selected:
+                    try:
+                        sel_el.evaluate(f"""
+                            el => {{
+                                const opts = Array.from(el.options);
+                                const target = {repr(best)};
+                                const o = opts.find(o => o.text.trim() === target);
+                                if (o) {{
+                                    o.selected = true;
+                                    el.dispatchEvent(new Event('change', {{bubbles: true}}));
+                                    el.dispatchEvent(new Event('input',  {{bubbles: true}}));
+                                }}
+                            }}
+                        """)
+                        selected = True
+                    except Exception:
+                        pass
+
+                if selected:
                     _human_pause(0.3, 0.6)
                     print(f"  [Applicator-A] Dropdown llenado: {question[:50]!r} → {best!r}")
                     filled += 1
@@ -878,9 +919,20 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                 # e) Buscar botón Next / Review
                 next_btn = _find_next_button(page)
                 if next_btn is None:
-                    print("  [Applicator-A] Formulario inesperado — deja el navegador abierto para completar manualmente.")
+                    print("  [Applicator-A] Sin botón siguiente — notificando por Telegram para completar manualmente.")
+                    shot_path = _screenshot_on_error(page, "stuck_form")
+                    if config.HITL_ENABLED:
+                        # Notificar a Lorena con screenshot para que complete manualmente
+                        _job_stuck = dict(job)
+                        _job_stuck["cargo"] = cargo
+                        _job_stuck["empresa"] = empresa
+                        send_screenshot_for_approval_sync(
+                            shot_path or "",
+                            _job_stuck,
+                            extra_msg="⚠️ El formulario tiene preguntas que el agente no pudo responder. Por favor completa y envía manualmente en el browser que está abierto.",
+                        )
                     try:
-                        page.wait_for_event("close", timeout=300_000)
+                        page.wait_for_event("close", timeout=config.HITL_TIMEOUT_S * 1_000)
                     except Exception:
                         pass
                     ctx.close()

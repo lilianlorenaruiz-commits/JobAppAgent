@@ -172,12 +172,14 @@ def send_screenshot_for_approval(image_path: str, job: dict) -> None:
     print(f"[HITL] Screenshot enviado — esperando respuesta para {cargo} @ {empresa}")
 
 
-def send_screenshot_for_approval_sync(image_path: str, job: dict) -> None:
+def send_screenshot_for_approval_sync(image_path: str, job: dict,
+                                       extra_msg: str = "") -> None:
     """
     Versión sync de send_screenshot_for_approval — usa urllib.request (sin asyncio).
     Seguro para llamar desde dentro del context manager de Playwright sync API.
 
     Envía sendPhoto si image_path existe, sendMessage si no.
+    extra_msg: mensaje adicional a incluir en el caption (ej: instrucciones manuales).
     Nunca propaga excepciones — errores se silencian con print.
     """
     try:
@@ -193,6 +195,8 @@ def send_screenshot_for_approval_sync(image_path: str, job: dict) -> None:
             f"Responde NO para cancelar\n"
             f"Tienes {timeout_min} minutos"
         )
+        if extra_msg:
+            caption += f"\n\n{extra_msg}"
         base_url = f"https://api.telegram.org/bot{token}"
 
         if image_path and os.path.exists(image_path):

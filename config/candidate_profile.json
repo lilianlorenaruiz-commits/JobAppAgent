@@ -1,0 +1,19 @@
+{
+  "salary_text":               "6.500.000 COP / 2.300 USD mensuales",
+  "salary_cop_monthly":        "6500000",
+  "salary_usd_monthly":        "2300",
+  "city":                      "Bogotá D.C., Colombia",
+  "country":                   "Colombia",
+  "willing_to_travel":         "Sí",
+  "willing_to_relocate":       "No",
+  "availability":              "Inmediata",
+  "has_vehicle":               "Sí",
+  "currently_employed":        "Sí",
+  "work_authorization":        "Sí",
+  "requires_visa_sponsorship": "No",
+  "night_shifts":              "No, disponible lunes a viernes en horario regular",
+  "hybrid_available":          "Sí",
+  "background_check":          "Sí",
+  "english_level":             "C2 - Proficiencia completa",
+  "years_experience":          "14"
+}

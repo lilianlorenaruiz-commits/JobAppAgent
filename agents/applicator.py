@@ -17,6 +17,7 @@ import re
 import sys
 import time
 import random
+import json
 import urllib.parse
 import subprocess
 import webbrowser
@@ -131,13 +132,94 @@ def _get_field_question(page, field) -> str:
         return ""
 
 
+def _load_candidate_profile() -> dict:
+    """
+    Carga config/candidate_profile.json con las respuestas estables de Lorena.
+    Retorna dict vacío si el archivo no existe o está malformado.
+    """
+    try:
+        profile_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "config", "candidate_profile.json"
+        )
+        with open(profile_path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+# Reglas keyword → clave de perfil (orden: más específico primero)
+# IMPORTANTE: reglas más específicas deben ir antes que las generales.
+# Ej: reubicación antes que ciudad, para evitar falso match en "reubicarte a otra ciudad".
+_PROFILE_KEYWORD_RULES = [
+    # Salario / pretensión
+    (["salarial", "salario", "pretensión", "pretension", "remuneraci", "compensation",
+      "salary", "wage", "económi"],                                    "salary_text"),
+    # Reubicación (antes que ciudad — "reubicarte a otra ciudad" debe caer aquí)
+    (["reubicar", "reubicaci", "relocat", "traslad"],                 "willing_to_relocate"),
+    # Ciudad / ubicación
+    (["ciudad", "city", "ubicaci", "location", "resid", "vives"],     "city"),
+    # Disponibilidad para viajar
+    (["viajar", "travel", "desplazarte", "viaje"],                    "willing_to_travel"),
+    # Disponibilidad de inicio
+    (["cuándo", "cuando", "comenzar", "iniciar", "disponibil",
+      "start", "availability", "incorporar"],                         "availability"),
+    # Verificación de antecedentes
+    (["antecedente", "background check", "verificaci", "security check"],
+                                                                       "background_check"),
+    # Inglés / idioma
+    (["inglés", "ingles", "english", "idioma", "language", "nivel de ingl"],
+                                                                       "english_level"),
+    # Vehículo — evitar "car" corto (falso match en "cargo", "caract", etc.)
+    (["vehículo", "vehiculo", "carro", "coche", "moto", "vehicle"],   "has_vehicle"),
+    # Turnos nocturnos
+    (["nocturno", "nocturn", "night shift", "turno de noche"],        "night_shifts"),
+    # Modalidad híbrida
+    (["híbrid", "hibrid"],                                             "hybrid_available"),
+    # Visa / patrocinio
+    (["visa", "sponsor", "patrocin"],                                  "requires_visa_sponsorship"),
+    # Autorización de trabajo
+    (["autorización", "autorizacion", "work authorization", "permiso de trabajo",
+      "work permit"],                                                   "work_authorization"),
+    # Años de experiencia
+    (["años de experiencia", "years of experience", "experiencia profesional"],
+                                                                       "years_experience"),
+    # Empleo actual
+    (["actualmente empleado", "currently employed", "trabajando actualmente"],
+                                                                       "currently_employed"),
+]
+
+
+def _match_profile_question(question: str, profile: dict) -> str:
+    """
+    Intenta hacer match de la pregunta contra las reglas keyword del perfil.
+    Retorna el valor del perfil si hay match, '' si no coincide ninguna regla
+    o si el perfil no tiene la clave correspondiente.
+    La comparación es case-insensitive.
+    """
+    if not profile:
+        return ""
+    q_lower = question.lower()
+    for keywords, profile_key in _PROFILE_KEYWORD_RULES:
+        if any(kw in q_lower for kw in keywords):
+            return str(profile.get(profile_key, ""))
+    return ""
+
+
 def _generate_field_answer(question: str, cv_text: str, job_description: str) -> str:
     """
-    Llama a Claude para generar una respuesta a un campo de texto libre.
-    Usa ÚNICAMENTE información del CV — no inventa hechos.
+    Genera una respuesta para un campo de texto libre.
+    Prioridad: perfil candidata → Claude.
     Máximo 150 caracteres.
-    Retorna cadena vacía si anthropic no está disponible.
+    Retorna cadena vacía si no hay respuesta disponible.
     """
+    # 1. Consultar perfil candidata (rápido, sin API)
+    profile = _load_candidate_profile()
+    profile_answer = _match_profile_question(question, profile)
+    if profile_answer:
+        return profile_answer[:150]
+
+    # 2. Fallback: Claude (solo si anthropic disponible)
     if anthropic is None:
         return ""
 

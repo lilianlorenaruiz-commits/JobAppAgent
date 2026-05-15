@@ -182,11 +182,15 @@ class TestGenerateFieldAnswer:
     # ── Ciclo 22 ──────────────────────────────────────────────────────────────
 
     def test_returns_empty_string_when_claude_raises(self):
-        """Si la API de Anthropic lanza excepción, retorna '' sin propagar."""
+        """Si la API de Anthropic lanza excepción, retorna '' sin propagar.
+        El perfil candidata se parchea vacío para forzar el path de Claude."""
         from agents.applicator import _generate_field_answer
         boom_client = MagicMock()
         boom_client.messages.create.side_effect = Exception("API rate limit")
-        with patch("agents.applicator.anthropic") as mock_ant:
+        with (
+            patch("agents.applicator._load_candidate_profile", return_value={}),
+            patch("agents.applicator.anthropic") as mock_ant,
+        ):
             mock_ant.Anthropic.return_value = boom_client
             result = _generate_field_answer("¿Cuántos años de experiencia?", _CV, _JD)
         assert result == ""
@@ -246,13 +250,17 @@ class TestFillFreeTextFields:
     # ── Ciclo 23 ──────────────────────────────────────────────────────────────
 
     def test_does_not_fill_when_answer_is_empty(self):
-        """Si Claude devuelve '' (excepción o sin anthropic), field.fill() NO se llama."""
+        """Si Claude devuelve '' (excepción o sin anthropic), field.fill() NO se llama.
+        El perfil candidata se parchea vacío para forzar el path de Claude."""
         from agents.applicator import _fill_free_text_fields
         field = _mock_field(placeholder="¿Por qué este cargo?", value="")
         page  = MagicMock()
         page.locator.return_value.all.return_value = [field]
-        # Claude responde vacío
-        with patch("agents.applicator.anthropic") as mock_ant:
+        # Claude responde vacío; perfil vacío para no hacer match antes
+        with (
+            patch("agents.applicator._load_candidate_profile", return_value={}),
+            patch("agents.applicator.anthropic") as mock_ant,
+        ):
             mock_ant.Anthropic.return_value = _mock_claude("")
             _fill_free_text_fields(page, _CV, _JD)
         field.fill.assert_not_called()
@@ -541,3 +549,140 @@ class TestApplyLinkedinCanalAV2:
         mock_shot.assert_not_called()
         mock_wait.assert_not_called()
         assert result["enviado"] is True
+
+
+# ── Ciclo 27: candidate_profile.json — respuestas estructuradas ───────────────
+
+_PROFILE = {
+    "salary_text":              "6.500.000 COP / 2.300 USD mensuales",
+    "salary_cop_monthly":       "6500000",
+    "salary_usd_monthly":       "2300",
+    "city":                     "Bogotá D.C., Colombia",
+    "country":                  "Colombia",
+    "willing_to_travel":        "Sí",
+    "willing_to_relocate":      "No",
+    "availability":             "Inmediata",
+    "has_vehicle":              "Sí",
+    "currently_employed":       "Sí",
+    "work_authorization":       "Sí",
+    "requires_visa_sponsorship": "No",
+    "night_shifts":             "No, disponible lunes a viernes en horario regular",
+    "hybrid_available":         "Sí",
+    "background_check":         "Sí",
+    "english_level":            "C2 - Proficiencia completa",
+    "years_experience":         "14",
+}
+
+
+class TestMatchProfileQuestion:
+
+    def test_salary_question_returns_profile_answer(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Cuál es tu aspiración salarial?", _PROFILE)
+        assert ans == _PROFILE["salary_text"]
+
+    def test_pretension_keyword_matches_salary(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("Pretensión económica mensual", _PROFILE)
+        assert ans == _PROFILE["salary_text"]
+
+    def test_city_question_returns_bogota(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿En qué ciudad vives actualmente?", _PROFILE)
+        assert "Bogotá" in ans
+
+    def test_travel_question_returns_si(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Estás dispuesto a viajar?", _PROFILE)
+        assert ans == "Sí"
+
+    def test_relocation_question_returns_no(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Puedes reubicarte a otra ciudad?", _PROFILE)
+        assert ans == "No"
+
+    def test_availability_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Cuándo podría comenzar a trabajar con nosotros?", _PROFILE)
+        assert ans == "Inmediata"
+
+    def test_background_check_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question(
+            "¿Estaría dispuesto a someterse a una verificación de antecedentes?", _PROFILE
+        )
+        assert ans == "Sí"
+
+    def test_english_question_returns_level(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Cuál es tu nivel de inglés?", _PROFILE)
+        assert "C2" in ans
+
+    def test_vehicle_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Tienes vehículo propio?", _PROFILE)
+        assert ans == "Sí"
+
+    def test_night_shifts_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Disponible para trabajar en turnos nocturnos?", _PROFILE)
+        assert "No" in ans
+
+    def test_hybrid_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Puede trabajar en modalidad híbrida?", _PROFILE)
+        assert ans == "Sí"
+
+    def test_visa_sponsorship_question(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Requiere patrocinio de visa en el futuro?", _PROFILE)
+        assert ans == "No"
+
+    def test_unknown_question_returns_empty_string(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Tienes mascota?", _PROFILE)
+        assert ans == ""
+
+    def test_matching_is_case_insensitive(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("SALARIO ESPERADO", _PROFILE)
+        assert ans == _PROFILE["salary_text"]
+
+    def test_empty_profile_returns_empty_string(self):
+        from agents.applicator import _match_profile_question
+        ans = _match_profile_question("¿Cuál es tu aspiración salarial?", {})
+        assert ans == ""
+
+
+class TestGenerateFieldAnswerWithProfile:
+
+    def test_profile_answer_used_without_calling_claude(self):
+        """Cuando la pregunta coincide con el perfil, Claude NO se llama."""
+        from agents.applicator import _generate_field_answer
+        with (
+            patch("agents.applicator._load_candidate_profile", return_value=_PROFILE),
+            patch("agents.applicator.anthropic") as mock_ant,
+        ):
+            result = _generate_field_answer("¿Cuál es tu aspiración salarial?", _CV, _JD)
+        mock_ant.Anthropic.assert_not_called()
+        assert result == _PROFILE["salary_text"]
+
+    def test_falls_back_to_claude_for_unknown_question(self):
+        """Para preguntas no reconocidas, se llama Claude normalmente."""
+        from agents.applicator import _generate_field_answer
+        with (
+            patch("agents.applicator._load_candidate_profile", return_value=_PROFILE),
+            patch("agents.applicator.anthropic") as mock_ant,
+        ):
+            mock_ant.Anthropic.return_value = _mock_claude("Tengo experiencia en paid media.")
+            result = _generate_field_answer("Describe tu experiencia más relevante", _CV, _JD)
+        mock_ant.Anthropic.assert_called_once()
+        assert isinstance(result, str)
+
+    def test_profile_answer_truncated_to_150_chars(self):
+        """Las respuestas del perfil también respetan el límite de 150 chars."""
+        from agents.applicator import _generate_field_answer
+        long_profile = {**_PROFILE, "salary_text": "X" * 200}
+        with patch("agents.applicator._load_candidate_profile", return_value=long_profile):
+            result = _generate_field_answer("¿Cuál es tu aspiración salarial?", _CV, _JD)
+        assert len(result) <= 150

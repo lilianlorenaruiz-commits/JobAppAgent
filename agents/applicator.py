@@ -572,13 +572,28 @@ def _extract_linkedin_job_info(page) -> dict:
         # pero solo es alcanzable via texto ("About the job" es el marcador estable)
         # o via page.inner_text('body') con parsing por marcadores de sección.
 
-        # 4a. XPath por texto — "About the job" / "Acerca del puesto" es estable
+        # Marcadores de sección — inglés + español Colombia/Chile/Argentina
+        # Diagnóstico 2026-05-15: perfil Lorena usa "Acerca del empleo" (no "del puesto")
+        _JD_START_MARKERS = [
+            "About the job", "About this job", "Job description",
+            "Acerca del empleo",   # ← confirmado en perfil ES-CO de Lorena
+            "Acerca del puesto",
+        ]
+        _JD_END_MARKERS = [
+            "Show more jobs", "More jobs", "Más empleos",
+            "Mostrar más empleos", "Mostrar más",
+            "People also viewed", "Personas que también",
+            "LinkedIn members give", "You applied",
+            "Solicitud enviada", "Similar jobs", "Empleos similares",
+        ]
+
+        # 4a. XPath por texto — marcador de sección es estable aunque las clases CSS cambien
         if not info["descripcion"]:
             try:
                 desc = page.evaluate("""
                     () => {
-                        const markers = ['About the job', 'Acerca del puesto',
-                                         'About this job', 'Job description'];
+                        const markers = ['About the job', 'About this job', 'Job description',
+                                         'Acerca del empleo', 'Acerca del puesto'];
                         const xpath = "//*[" +
                             markers.map(m =>
                                 "starts-with(normalize-space(.), '" + m + "')"
@@ -596,7 +611,7 @@ def _extract_linkedin_job_info(page) -> dict:
                                 best = txt;
                             }
                         }
-                        // Quitar el encabezado "About the job" de la descripción
+                        // Quitar el encabezado de la descripción
                         for (const m of markers) {
                             if (best.startsWith(m)) {
                                 best = best.slice(m.length).trim();
@@ -610,8 +625,7 @@ def _extract_linkedin_job_info(page) -> dict:
                     # El JS elimina el marcador en el browser real; aquí lo quitamos
                     # también para que los tests (donde el JS no se ejecuta) funcionen.
                     desc_clean = desc.strip()
-                    for m in ["About the job", "Acerca del puesto",
-                               "About this job", "Job description"]:
+                    for m in _JD_START_MARKERS:
                         if desc_clean.startswith(m):
                             desc_clean = desc_clean[len(m):].strip()
                             break
@@ -626,12 +640,8 @@ def _extract_linkedin_job_info(page) -> dict:
             try:
                 body_text = page.evaluate("() => document.body.innerText")
                 if body_text:
-                    _START = ["About the job", "Acerca del puesto",
-                               "About this job", "Job description"]
-                    _END   = ["Show more jobs", "Mostrar más empleos",
-                               "People also viewed", "Personas que también",
-                               "LinkedIn members give", "You applied",
-                               "Solicitud enviada", "Similar jobs", "Empleos similares"]
+                    _START = _JD_START_MARKERS
+                    _END   = _JD_END_MARKERS
                     text = body_text
                     for marker in _START:
                         idx = text.find(marker)

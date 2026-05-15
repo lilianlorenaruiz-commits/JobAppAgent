@@ -255,9 +255,14 @@ def send_message_sync(text: str) -> None:
         req = urllib.request.Request(f"{base_url}/sendMessage", data=data)
         with urllib.request.urlopen(req, timeout=10) as resp:
             resp.read()
-        print(f"[HITL] Mensaje enviado: {text[:60]!r}")
+        # Print seguro: Windows usa cp1252; emojis deben sustituirse.
+        enc = getattr(sys.stdout, "encoding", "utf-8") or "utf-8"
+        safe = text[:60].encode(enc, errors="replace").decode(enc)
+        print(f"[HITL] Mensaje enviado: {safe!r}")
     except Exception as e:
-        print(f"[HITL] send_message_sync error: {e}")
+        enc = getattr(sys.stdout, "encoding", "utf-8") or "utf-8"
+        safe_e = str(e).encode(enc, errors="replace").decode(enc)
+        print(f"[HITL] send_message_sync error: {safe_e}")
 
 
 # ── Polling HITL ───────────────────────────────────────────────────────────────

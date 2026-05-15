@@ -506,12 +506,17 @@ def _extract_linkedin_job_info(page) -> dict:
     """
     info = {"cargo": "", "empresa": "", "descripcion": ""}
     try:
-        # 0. Scroll para activar lazy-loading de la descripción
+        # 0. Scroll para activar lazy-loading de la descripción.
+        # LinkedIn necesita 3-5s para que React renderice la sección de descripción
+        # en el browser automatizado (Playwright abre Chromium desde cero).
+        import time as _time
         try:
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
-            import time as _time
-            _time.sleep(0.8)
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight / 3)")
+            _time.sleep(1.5)
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight * 2 / 3)")
+            _time.sleep(1.5)
             page.evaluate("window.scrollTo(0, 0)")
+            _time.sleep(1.0)
         except Exception:
             pass
 

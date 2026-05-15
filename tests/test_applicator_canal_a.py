@@ -719,8 +719,9 @@ class TestExtractLinkedinJobInfo:
         page.locator.side_effect = _locator_side_effect
 
         # evaluate() calls en orden real de la implementación:
-        # [0] scroll, [1] scroll, [2] XPath→desc, [3] body→"", [4] JSON-LD→""
-        page.evaluate.side_effect = [None, None, desc, "", ""]
+        # [0] scroll a 1/3, [1] scroll a 2/3, [2] scroll a 0,
+        # [3] XPath→desc, [4] body→"", [5] JSON-LD→""
+        page.evaluate.side_effect = [None, None, None, desc, "", ""]
         return page
 
     def test_returns_dict_with_three_keys(self):
@@ -813,10 +814,11 @@ class TestExtractLinkedinJobInfo:
         page.locator.return_value = loc
         # La impl hace 2 evaluate() de scroll + 3 de extracción (XPath, body, JSON-LD).
         # side_effect[0,1] = scroll calls (return valor ignorado)
-        # side_effect[2]   = XPath extraction → vacío (simula fallo)
-        # side_effect[3]   = body.innerText → vacío (sin marker "About the job")
-        # side_effect[4]   = JSON-LD → texto largo
-        page.evaluate.side_effect = [None, None, "", "", _long_desc]
+        # side_effect[0,1,2] = 3 scroll calls
+        # side_effect[3]     = XPath extraction → vacío (simula fallo)
+        # side_effect[4]     = body.innerText → vacío (sin marker "About the job")
+        # side_effect[5]     = JSON-LD → texto largo
+        page.evaluate.side_effect = [None, None, None, "", "", _long_desc]
 
         result = _extract_linkedin_job_info(page)
         assert len(result["descripcion"]) > 100, "descripcion debe extraerse via JSON-LD cuando JS falla"
@@ -845,8 +847,8 @@ class TestExtractLinkedinJobInfo:
         loc.first.is_visible.return_value = False
         page.locator.return_value = loc
 
-        # scroll[0], scroll[1], XPath retorna el texto con marcador
-        page.evaluate.side_effect = [None, None, _desc_with_marker]
+        # scroll[0], scroll[1], scroll[2], XPath retorna el texto con marcador
+        page.evaluate.side_effect = [None, None, None, _desc_with_marker]
 
         result = _extract_linkedin_job_info(page)
         assert len(result["descripcion"]) > 100, (
@@ -886,8 +888,8 @@ class TestExtractLinkedinJobInfo:
         loc.first.is_visible.return_value = False
         page.locator.return_value = loc
 
-        # scroll[0], scroll[1], XPath falla (""), body.innerText retorna _body
-        page.evaluate.side_effect = [None, None, "", _body]
+        # scroll[0], scroll[1], scroll[2], XPath falla (""), body.innerText retorna _body
+        page.evaluate.side_effect = [None, None, None, "", _body]
 
         result = _extract_linkedin_job_info(page)
         assert len(result["descripcion"]) > 100, (

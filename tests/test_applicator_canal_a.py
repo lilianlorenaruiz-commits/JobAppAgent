@@ -867,3 +867,56 @@ class TestFindSubmitButton:
         page = self._page_with_visible("Review")
         result = _find_next_button(page)
         assert result is not None
+
+
+# ── Ciclo 32: _maybe_upload_cv sin is_visible() ───────────────────────────────
+
+import tempfile
+
+class TestMaybeUploadCvHiddenInput:
+    """_maybe_upload_cv debe subir el CV aunque el input sea display:none."""
+
+    def test_uploads_to_hidden_file_input(self):
+        """set_input_files se llama aunque is_visible() retorne False (display:none).
+        LinkedIn oculta los file inputs — is_visible() siempre retorna False en ellos."""
+        from agents.applicator import _maybe_upload_cv
+        page = MagicMock()
+        inp = MagicMock()
+        inp.is_visible.return_value = False   # ← simula display:none real
+        inp.set_input_files = MagicMock()
+        page.locator.return_value.first = inp
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+            pdf_path = f.name
+        try:
+            _maybe_upload_cv(page, pdf_path)
+            inp.set_input_files.assert_called_once_with(pdf_path)
+        finally:
+            os.unlink(pdf_path)
+
+    def test_skips_when_pdf_path_empty(self):
+        """Sin pdf_path no se intenta subir nada."""
+        from agents.applicator import _maybe_upload_cv
+        page = MagicMock()
+        _maybe_upload_cv(page, "")
+        page.locator.assert_not_called()
+
+    def test_skips_when_pdf_not_exists(self):
+        """Si el archivo no existe no se intenta subir."""
+        from agents.applicator import _maybe_upload_cv
+        page = MagicMock()
+        _maybe_upload_cv(page, "/nonexistent/path.pdf")
+        page.locator.assert_not_called()
+
+    def test_does_not_raise_when_set_input_files_fails(self):
+        """Si el selector no existe, captura la excepción silenciosamente."""
+        from agents.applicator import _maybe_upload_cv
+        page = MagicMock()
+        page.locator.return_value.first.set_input_files.side_effect = Exception("No element")
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+            pdf_path = f.name
+        try:
+            _maybe_upload_cv(page, pdf_path)  # no debe lanzar
+        finally:
+            os.unlink(pdf_path)

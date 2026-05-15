@@ -729,7 +729,12 @@ def _apply_linkedin(job: dict, pdf_path: str,
 
 
 def _maybe_upload_cv(page, pdf_path: str) -> None:
-    """Sube el PDF si hay un campo de archivo visible en la página actual."""
+    """Sube el PDF al campo de archivo de LinkedIn Easy Apply.
+
+    LinkedIn oculta el input[type='file'] con display:none por diseño.
+    is_visible() siempre retorna False → NO verificar visibilidad.
+    Llamar set_input_files() directamente; capturar excepciones por selector.
+    """
     if not pdf_path or not os.path.exists(pdf_path):
         return
     selectors = [
@@ -740,11 +745,10 @@ def _maybe_upload_cv(page, pdf_path: str) -> None:
     for sel in selectors:
         try:
             inp = page.locator(sel).first
-            if inp.is_visible(timeout=1_500):
-                inp.set_input_files(pdf_path)
-                _human_pause(0.5, 1.0)
-                print(f"  [Applicator-A] CV subido: {os.path.basename(pdf_path)}")
-                return
+            inp.set_input_files(pdf_path)
+            _human_pause(0.5, 1.0)
+            print(f"  [Applicator-A] CV subido: {os.path.basename(pdf_path)}")
+            return
         except Exception:
             continue
 

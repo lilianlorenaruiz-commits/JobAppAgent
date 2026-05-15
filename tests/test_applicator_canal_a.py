@@ -818,3 +818,52 @@ class TestParseTitleForJobInfo:
         assert "cargo linkedin" in _PLACEHOLDER_VALUES
         assert "empresa linkedin" in _PLACEHOLDER_VALUES
         assert "product manager" not in _PLACEHOLDER_VALUES
+
+
+# ── Ciclo 31: _find_submit_button — HITL solo en submit real ─────────────────
+
+class TestFindSubmitButton:
+    """_find_submit_button NO debe retornar el botón 'Review' (paso intermedio)."""
+
+    def _page_with_visible(self, selector_fragment: str):
+        """Página donde solo el selector que contiene selector_fragment es visible."""
+        page = MagicMock()
+        def locator_side(sel, **kw):
+            loc = MagicMock()
+            loc.first.is_visible.return_value = selector_fragment in sel
+            return loc
+        page.locator.side_effect = locator_side
+        return page
+
+    def _page_no_visible(self):
+        page = MagicMock()
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        return page
+
+    def test_finds_submit_application(self):
+        from agents.applicator import _find_submit_button
+        page = self._page_with_visible("Submit application")
+        assert _find_submit_button(page) is not None
+
+    def test_finds_enviar_solicitud(self):
+        from agents.applicator import _find_submit_button
+        page = self._page_with_visible("Enviar solicitud")
+        assert _find_submit_button(page) is not None
+
+    def test_review_button_not_treated_as_submit(self):
+        """'Review' es navegación intermedia — NO debe disparar HITL."""
+        from agents.applicator import _find_submit_button
+        assert _find_submit_button(self._page_no_visible()) is None
+
+    def test_returns_none_when_no_submit_visible(self):
+        from agents.applicator import _find_submit_button
+        assert _find_submit_button(self._page_no_visible()) is None
+
+    def test_find_next_button_treats_review_as_next(self):
+        """'Review' debe ser tratado como botón Next, no Submit."""
+        from agents.applicator import _find_next_button
+        page = self._page_with_visible("Review")
+        result = _find_next_button(page)
+        assert result is not None

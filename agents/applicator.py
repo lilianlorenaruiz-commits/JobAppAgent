@@ -624,28 +624,12 @@ def _linkedin_playwright_loop(job: dict, pdf_path: str,
                 # c) Smart fill: campos de texto libre con Claude
                 _fill_free_text_fields(page, cv_text, job_description)
 
-                # d) Detectar si hay el botón Submit / Review (último paso)
-                # "Review" aparece en la última página de preguntas antes del envío.
-                # "Enviar solicitud" / "Submit application" aparece en la pantalla final.
-                # LinkedIn puede estar en español o inglés según la cuenta.
-                submit_btn = None
-                for _submit_sel in [
-                    "button[aria-label='Submit application']",
-                    "button[aria-label='Enviar solicitud']",
-                    "button[aria-label='Review your application']",
-                    "button:has-text('Submit application')",
-                    "button:has-text('Enviar solicitud')",
-                    "button:has-text('Enviar')",
-                    "button:has-text('Review')",
-                    "button:has-text('Revisar')",
-                ]:
-                    try:
-                        loc = page.locator(_submit_sel).first
-                        if loc.is_visible(timeout=1_500):
-                            submit_btn = loc
-                            break
-                    except Exception:
-                        continue
+                # d) Detectar si hay el botón Submit FINAL (último paso)
+                # "Submit application" / "Enviar solicitud" aparece en la pantalla de confirmación.
+                # "Review" es un paso INTERMEDIO — _find_submit_button NO lo incluye.
+                # El agente hace click en "Review" automáticamente (como Next) y espera
+                # la pantalla de confirmación para disparar HITL.
+                submit_btn = _find_submit_button(page)
                 if submit_btn is not None and submit_btn.is_visible(timeout=500):
                     _human_pause(0.5, 1.0)
 
@@ -781,12 +765,44 @@ def _fill_simple_fields(page) -> None:
             continue
 
 
+# Selectores del botón de SUBMIT FINAL — NO incluir "Review" ni "Revisar"
+# (esos son botones de navegación intermedia hacia la pantalla de confirmación)
+_SUBMIT_SELECTORS = [
+    "button[aria-label='Submit application']",
+    "button[aria-label='Enviar solicitud']",
+    "button:has-text('Submit application')",
+    "button:has-text('Enviar solicitud')",
+    "button:has-text('Enviar')",
+]
+
+
+def _find_submit_button(page):
+    """
+    Retorna el botón de submit FINAL (Submit application / Enviar solicitud).
+    NO incluye 'Review' ni 'Review your application' — esos son pasos intermedios
+    que navegan a la pantalla de confirmación, no el submit real.
+    Retorna None si no hay botón de submit visible.
+    """
+    for sel in _SUBMIT_SELECTORS:
+        try:
+            btn = page.locator(sel).first
+            if btn.is_visible(timeout=1_500):
+                return btn
+        except Exception:
+            continue
+    return None
+
+
 def _find_next_button(page):
-    """Retorna el botón Next / Siguiente / Review / Continue si está visible."""
+    """Retorna el botón Next / Siguiente / Review / Continue si está visible.
+    'Review' y 'Revisar' son navegación intermedia hacia la pantalla de confirmación,
+    NO el submit final — se tratan como Next."""
     labels = [
         "Continue to next step",
-        "Review your application",
+        "Review your application",   # navega a pantalla de confirmación
         "Revisar tu solicitud",
+        "Review",                    # paso intermedio — no submit
+        "Revisar",                   # igual en español
         "Next",
         "Siguiente",
         "Continue",

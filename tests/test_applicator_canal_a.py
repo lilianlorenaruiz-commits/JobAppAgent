@@ -579,12 +579,13 @@ class TestMatchProfileQuestion:
     def test_salary_question_returns_profile_answer(self):
         from agents.applicator import _match_profile_question
         ans = _match_profile_question("¿Cuál es tu aspiración salarial?", _PROFILE)
-        assert ans == _PROFILE["salary_text"]
+        # Debe devolver número COP puro — el campo numérico de LinkedIn lo acepta
+        assert ans == _PROFILE["salary_cop_monthly"]
 
     def test_pretension_keyword_matches_salary(self):
         from agents.applicator import _match_profile_question
         ans = _match_profile_question("Pretensión económica mensual", _PROFILE)
-        assert ans == _PROFILE["salary_text"]
+        assert ans == _PROFILE["salary_cop_monthly"]
 
     def test_city_question_returns_bogota(self):
         from agents.applicator import _match_profile_question
@@ -646,7 +647,7 @@ class TestMatchProfileQuestion:
     def test_matching_is_case_insensitive(self):
         from agents.applicator import _match_profile_question
         ans = _match_profile_question("SALARIO ESPERADO", _PROFILE)
-        assert ans == _PROFILE["salary_text"]
+        assert ans == _PROFILE["salary_cop_monthly"]
 
     def test_empty_profile_returns_empty_string(self):
         from agents.applicator import _match_profile_question
@@ -665,7 +666,7 @@ class TestGenerateFieldAnswerWithProfile:
         ):
             result = _generate_field_answer("¿Cuál es tu aspiración salarial?", _CV, _JD)
         mock_ant.Anthropic.assert_not_called()
-        assert result == _PROFILE["salary_text"]
+        assert result == _PROFILE["salary_cop_monthly"]
 
     def test_falls_back_to_claude_for_unknown_question(self):
         """Para preguntas no reconocidas, se llama Claude normalmente."""

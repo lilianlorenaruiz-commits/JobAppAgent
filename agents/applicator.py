@@ -152,9 +152,9 @@ def _load_candidate_profile() -> dict:
 # IMPORTANTE: reglas más específicas deben ir antes que las generales.
 # Ej: reubicación antes que ciudad, para evitar falso match en "reubicarte a otra ciudad".
 _PROFILE_KEYWORD_RULES = [
-    # Salario / pretensión
+    # Salario / pretensión → número COP puro (campo numérico LinkedIn espera decimal)
     (["salarial", "salario", "pretensión", "pretension", "remuneraci", "compensation",
-      "salary", "wage", "económi"],                                    "salary_text"),
+      "salary", "wage", "económi"],                                    "salary_cop_monthly"),
     # Reubicación (antes que ciudad — "reubicarte a otra ciudad" debe caer aquí)
     (["reubicar", "reubicaci", "relocat", "traslad"],                 "willing_to_relocate"),
     # Ciudad / ubicación

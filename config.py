@@ -58,5 +58,5 @@ APPLICANT_EMAIL = "lilian@lorena-ruiz.com"
 
 # ── Applicator v2 — HITL + Smart Fill ─────────────────────────────────────────
 HITL_ENABLED   = True   # Si True: pausa antes de Submit Canal A (primeras 2 semanas)
-HITL_TIMEOUT_S = 300    # Segundos de espera de confirmación Telegram (5 min)
+HITL_TIMEOUT_S = 600    # Segundos de espera de confirmación Telegram (10 min)
 EMAIL_ACCOUNT  = "lilianlorena.ruiz@gmail.com"  # Cuenta para notificación Canal C

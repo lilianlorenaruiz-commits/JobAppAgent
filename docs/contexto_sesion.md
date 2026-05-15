@@ -7,7 +7,7 @@
 
 ## Estado actual del proyecto
 
-**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 226/226 tests GREEN**
+**TODOS LOS CANALES APROBADOS EN SMOKE TEST REAL — 228/228 tests GREEN**
 
 | Canal | Estado | Smoke test |
 |---|---|---|
@@ -77,10 +77,10 @@ Si ya fue aplicado → retorna `enviado=True` sin reenviar.
 
 ---
 
-## Test Suite — 226 tests
+## Test Suite — 228 tests
 
 ```bash
-python -m pytest -q    # → 226 passed
+python -m pytest -q    # → 228 passed
 ```
 
 | Archivo | Tests | Cubre |

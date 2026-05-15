@@ -19,3 +19,9 @@ _debug_audit_output.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Browser session data
+browser_profile/
+
+# Local screenshots
+screenshots/

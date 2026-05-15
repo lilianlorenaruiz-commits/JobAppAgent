@@ -301,19 +301,24 @@ def _parse_title_for_job_info(title: str) -> dict:
     """
     Extrae cargo y empresa del título del tab de LinkedIn.
     Formatos soportados:
-      "Product Manager at Falabella | LinkedIn"
-      "(3) Product Manager at Falabella | LinkedIn"
-      "Gerente de Marketing en Falabella | LinkedIn"
+      "Product Manager | Falabella | LinkedIn"          ← formato real (pipe)
+      "Product Manager at Falabella | LinkedIn"         ← inglés (at)
+      "(3) Gerente de Marketing en Falabella | LinkedIn" ← español (en)
     Retorna {"cargo": "", "empresa": ""} si el formato no coincide.
     """
     if not title:
         return {"cargo": "", "empresa": ""}
     # Remover prefijo de notificación "(N) "
     title = re.sub(r"^\(\d+\)\s*", "", title)
-    # Remover sufijo " | LinkedIn"
+    # Remover sufijo " | LinkedIn" — lo que queda es "Cargo | Empresa"
+    # o "Cargo at Empresa" / "Cargo en Empresa"
     if " | LinkedIn" in title:
         title = title[: title.index(" | LinkedIn")]
-    # Separar por " at " (inglés) o " en " (español)
+    # 1. Pipe: "Product Manager | Falabella"  ← formato real de LinkedIn
+    if " | " in title:
+        parts = title.split(" | ", 1)
+        return {"cargo": parts[0].strip(), "empresa": parts[1].strip()}
+    # 2. " at " (inglés) o " en " (español) como fallback
     for sep in [" at ", " en "]:
         if sep in title:
             parts = title.split(sep, 1)

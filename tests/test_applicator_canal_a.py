@@ -770,7 +770,25 @@ class TestExtractLinkedinJobInfo:
 # ── Ciclo 30: _parse_title_for_job_info + extracción robusta ─────────────────
 
 class TestParseTitleForJobInfo:
-    """page.title() es más estable que selectores CSS en LinkedIn."""
+    """page.title() es más estable que selectores CSS en LinkedIn.
+
+    Ciclo 30: formatos at/en
+    Ciclo 34: formato pipe real — confirmado con debug: 'Product Manager | Falabella | LinkedIn'
+    """
+
+    def test_pipe_format_real_linkedin(self):
+        """Formato REAL de LinkedIn confirmado en smoke test: 'Cargo | Empresa | LinkedIn'."""
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("Product Manager | Falabella | LinkedIn")
+        assert result["cargo"] == "Product Manager"
+        assert result["empresa"] == "Falabella"
+
+    def test_pipe_format_with_notification_prefix(self):
+        """Formato pipe con prefijo de notificaciones '(N) '."""
+        from agents.applicator import _parse_title_for_job_info
+        result = _parse_title_for_job_info("(5) Media Planning Manager | OMD Colombia | LinkedIn")
+        assert result["cargo"] == "Media Planning Manager"
+        assert result["empresa"] == "OMD Colombia"
 
     def test_standard_english_format(self):
         from agents.applicator import _parse_title_for_job_info
@@ -800,8 +818,20 @@ class TestParseTitleForJobInfo:
         result = _parse_title_for_job_info("")
         assert result == {"cargo": "", "empresa": ""}
 
+    def test_page_title_pipe_format_used_in_extract(self):
+        """_extract_linkedin_job_info parsea formato pipe real de LinkedIn."""
+        from agents.applicator import _extract_linkedin_job_info
+        page = MagicMock()
+        page.title.return_value = "Product Manager | Falabella | LinkedIn"
+        loc = MagicMock()
+        loc.first.is_visible.return_value = False
+        page.locator.return_value = loc
+        result = _extract_linkedin_job_info(page)
+        assert result["cargo"] == "Product Manager"
+        assert result["empresa"] == "Falabella"
+
     def test_page_title_used_in_extract(self):
-        """_extract_linkedin_job_info llama page.title() y lo parsea."""
+        """_extract_linkedin_job_info llama page.title() y lo parsea (formato at)."""
         from agents.applicator import _extract_linkedin_job_info
         page = MagicMock()
         page.title.return_value = "Paid Media Manager at OMD Colombia | LinkedIn"

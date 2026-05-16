@@ -84,17 +84,20 @@ and exact offer terms — what to fix, where, and how]</FEEDBACK_TO_REWRITER>\
 """
 
 
-def audit(job: dict, cv_text: str) -> dict:
+def audit(job: dict, cv_text: str, evidence_map: dict | None = None) -> dict:
     """
     Audita el CV reescrito contra la oferta específica.
 
     Args:
-        job:     dict con cargo, empresa, descripcion, modalidad, ubicacion
-        cv_text: texto plano del CV ya reescrito por cv_rewriter para este job
+        job:          dict con cargo, empresa, descripcion, modalidad, ubicacion
+        cv_text:      texto plano del CV ya reescrito por cv_rewriter para este job
+        evidence_map: (opcional) evidence_map de evidence_mapper — si se provee,
+                      agrega tier3_skills_count y claims_sin_evidencia al output
 
     Returns:
         dict con audit_score, verdict, keywords_missing, weak_points,
-             feedback_to_rewriter, passed_audit
+             feedback_to_rewriter, passed_audit,
+             tier3_skills_count (int), claims_sin_evidencia (list)
     """
     from datetime import date as _date
     today = _date.today().strftime("%B %d, %Y")
@@ -137,13 +140,23 @@ def audit(job: dict, cv_text: str) -> dict:
     weak_points         = [l.strip() for l in wp_m.group(1).splitlines() if l.strip()] if wp_m else []
     feedback_to_rewriter = fb_m.group(1).strip() if fb_m else ""
 
+    # Evidence fields — populated if evidence_map provided
+    tier3_count = 0
+    claims_sin_evidencia = []
+    if evidence_map:
+        from agents.evidence_mapper import verify_evidence
+        tier3_count = sum(1 for v in evidence_map.values() if v["tier"] == 3)
+        claims_sin_evidencia = verify_evidence(cv_text, evidence_map)
+
     return {
-        "audit_score":          audit_score,
-        "verdict":              verdict,
-        "keywords_missing":     keywords_missing,
-        "weak_points":          weak_points,
-        "feedback_to_rewriter": feedback_to_rewriter,
-        "passed_audit":         verdict in ("PASS", "CONDITIONAL"),
+        "audit_score":           audit_score,
+        "verdict":               verdict,
+        "keywords_missing":      keywords_missing,
+        "weak_points":           weak_points,
+        "feedback_to_rewriter":  feedback_to_rewriter,
+        "passed_audit":          verdict in ("PASS", "CONDITIONAL"),
+        "tier3_skills_count":    tier3_count,
+        "claims_sin_evidencia":  claims_sin_evidencia,
     }
 
 

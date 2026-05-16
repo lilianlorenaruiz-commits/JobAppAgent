@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 from agents.cv_parser import parse_cv
 from agents.narrative_builder import get_bullets_for_cv
+from agents.evidence_mapper import build_evidence_map, verify_evidence, POOR_FIT_THRESHOLD
 
 MAX_ATTEMPTS = 3
 _client: anthropic.Anthropic | None = None
@@ -320,6 +321,34 @@ def _enrich_with_narratives(cv_plain: str, rama: str) -> str:
     return cv_plain
 
 
+# ── Evidence map → texto para prompt ──────────────────────────────────────────
+
+def _format_evidence_map_for_prompt(evidence_map: dict) -> str:
+    """
+    Convierte el evidence_map en texto para incluir en el prompt de Claude.
+    Tier 1: narrativa completa con evidencia.
+    Tier 2: exposición — lenguaje conservador.
+    Tier 3: marcado explícitamente para omitir.
+    """
+    lines = ["EVIDENCE MAP (fuente de verdad — redactar SOLO con esto):"]
+    for skill, data in evidence_map.items():
+        tier = data["tier"]
+        evidencia = data.get("evidencia", [])
+        if tier == 1:
+            ev_text = " | ".join(
+                f"{e['rol']} → {e['bullet'][:100]}" for e in evidencia
+            )
+            lines.append(f"[Tier 1] {skill}: {ev_text}")
+        elif tier == 2:
+            ev_text = " | ".join(
+                f"{e['rol']} → {e['bullet'][:100]}" for e in evidencia
+            )
+            lines.append(f"[Tier 2 — exposición] {skill}: {ev_text}")
+        else:
+            lines.append(f"[Tier 3 — omitir del CV] {skill}")
+    return "\n".join(lines)
+
+
 # ── Una iteración de reescritura ───────────────────────────────────────────────
 
 _SYSTEM = """\
@@ -355,11 +384,11 @@ ThinkOnward, Latin America) must ONLY appear under the LinkedIn/Teleperformance 
    If a bullet is not listed under an employer, omit it. Never fabricate or borrow from another section.
 
 CONTENT AND STRUCTURE
-7. Inject keywords from the job description naturally into bullet points and the profile section.
+7. Redacta cada skill usando exactamente los hechos listados en su fila del EVIDENCE MAP — ningún dato adicional. No busques ni inventes evidencia fuera del mapa. Tier 1: narrativa de transferencia completa con verbo activo, contexto y resultado. Tier 2: lenguaje de exposición ("en contexto de", "a través de", "con exposición a"). Skill con [Tier 3 — omitir del CV]: no lo menciones bajo ningún concepto.
 8. Within each role, reorder bullet points so the most relevant appear first.
 9. Keep work experience roles in the EXACT order provided, most recent first. \
 Do NOT reorder roles based on relevance.
-10. Mirror the exact job-title language from the job description in the profile headline.
+10. El headline del PROFESSIONAL PROFILE describe el perfil real de la candidata adaptado al área del cargo — no copia el título exacto del JD. Ejemplo correcto: si el JD es "Category Manager Vestuario", el headline puede ser "Trade Marketing and Category Management Professional | Retail | Ecuador y Colombia".
 11. Detect the primary language of the job description (job posting). If the job description is primarily in Spanish, write all bullet points and the PROFESSIONAL PROFILE section in Spanish. If it is primarily in English, write them in English. Section headers (PROFESSIONAL PROFILE, WORK EXPERIENCE, EDUCATION, SKILLS, LANGUAGES) always remain in English regardless of the job description language.
 
 FORMATTING
@@ -414,14 +443,20 @@ def _rewrite_once(
     cv_plain: str,
     job: dict,
     previous_score: int | None,
+    evidence_map: dict | None = None,
     auditor_feedback: str = "",
 ) -> dict:
     retry_note = ""
     if previous_score is not None:
         retry_note = (
             f"\n\nPREVIOUS ATTEMPT SCORED {previous_score}% — NOT ENOUGH. "
-            "Increase keyword density and tighten alignment to reach 95%+."
+            "Reformulate the Tier 1 evidence descriptions with more keywords from the JD. "
+            "Do NOT add any claim not present in the EVIDENCE MAP."
         )
+
+    evidence_section = ""
+    if evidence_map:
+        evidence_section = "\n\n" + _format_evidence_map_for_prompt(evidence_map)
 
     audit_note = ""
     if auditor_feedback:
@@ -433,6 +468,7 @@ def _rewrite_once(
         f"MODALITY: {job.get('modalidad', '')} | LOCATION: {job.get('ubicacion', '')}\n\n"
         f"JOB DESCRIPTION:\n{job.get('descripcion', '')[:3000]}\n\n"
         f"ORIGINAL CV:\n{cv_plain}"
+        f"{evidence_section}"
         f"{retry_note}"
         f"{audit_note}"
     )
@@ -476,46 +512,95 @@ def rewrite(
     previous_cv_text: str = "",
 ) -> dict:
     """
-    Reescribe el CV optimizado para ATS. Hasta MAX_ATTEMPTS si score < 95.
-    Si auditor_feedback no está vacío, se inyecta en el primer intento de este ciclo.
-    Si previous_cv_text está presente, se usa como base en vez del CV original
-    (permite construir sobre mejoras del ciclo anterior del auditor).
+    Reescribe el CV optimizado para ATS usando evidence mapping.
+    Hasta MAX_ATTEMPTS si score < 95 y no es poor fit.
 
     Returns:
         {
-            "cv_text":        str,   # CV reescrito listo para generar PDF
-            "ats_score":      int,   # 0-100
-            "keywords_added": list,
-            "attempts":       int,
-            "passed_ats":     bool,
+            "cv_text":         str,
+            "ats_score":       int,
+            "keywords_added":  list,
+            "attempts":        int,
+            "passed_ats":      bool,
+            "poor_fit":        bool,   # True si JD tiene > POOR_FIT_THRESHOLD skills Tier 3
+            "poor_fit_reason": str,
         }
     """
+    import json
+
+    # Cargar narrativas
+    narrativas_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "narrativas", "narrativas_lorena.json",
+    )
+    narrativas = {}
+    try:
+        with open(narrativas_path, encoding="utf-8") as f:
+            narrativas = json.load(f)
+    except Exception as e:
+        print(f"[CVRewriter] narrativas no disponibles: {e}")
+
+    # Construir evidence map
+    evidence_map = {}
+    if job.get("descripcion") and narrativas:
+        try:
+            evidence_map = build_evidence_map(job["descripcion"], narrativas)
+            tier3_count = sum(1 for v in evidence_map.values() if v["tier"] == 3)
+            print(f"[CVRewriter] Evidence map: {len(evidence_map)} skills — "
+                  f"{sum(1 for v in evidence_map.values() if v['tier']==1)} T1, "
+                  f"{sum(1 for v in evidence_map.values() if v['tier']==2)} T2, "
+                  f"{tier3_count} T3")
+            # Poor fit: demasiados skills sin evidencia → un intento y retorna con flag
+            if tier3_count > POOR_FIT_THRESHOLD:
+                print(f"[CVRewriter] POOR FIT: {tier3_count} skills sin evidencia")
+                is_carry = bool(previous_cv_text)
+                cv_plain = previous_cv_text if is_carry else _cv_to_plain_text(cv, rama)
+                cv_enriched = cv_plain if is_carry else _enrich_with_narratives(cv_plain, rama)
+                result = _rewrite_once(cv_enriched, job, None,
+                                       evidence_map=evidence_map,
+                                       auditor_feedback=auditor_feedback)
+                result["attempts"] = 1
+                result["passed_ats"] = result["ats_score"] >= config.THRESHOLD_ATS
+                result["poor_fit"] = True
+                result["poor_fit_reason"] = f"{tier3_count} skills del JD sin evidencia en narrativas"
+                return result
+        except Exception as e:
+            print(f"[CVRewriter] evidence_mapper error: {e} — continuando sin mapa")
+
     is_carry_forward = bool(previous_cv_text)
     cv_plain    = previous_cv_text if is_carry_forward else _cv_to_plain_text(cv, rama)
     cv_enriched = cv_plain if is_carry_forward else _enrich_with_narratives(cv_plain, rama)
     result      = None
     prev        = None
-
-    # When carrying forward an already-optimized CV, one focused attempt is enough.
-    # The retry loop risks degrading a CV that's already well-structured.
     max_attempts = 1 if is_carry_forward else MAX_ATTEMPTS
 
     for attempt in range(1, max_attempts + 1):
         print(f"[CVRewriter] Intento {attempt}/{max_attempts} — {job['cargo']} @ {job['empresa']}")
         source = cv_enriched if attempt == 1 else cv_plain
         fb     = auditor_feedback if attempt == 1 else ""
-        result = _rewrite_once(source, job, prev, auditor_feedback=fb)
+        result = _rewrite_once(source, job, prev, evidence_map=evidence_map, auditor_feedback=fb)
         score  = result["ats_score"]
         print(f"[CVRewriter] Score ATS: {score}%")
 
         if score >= config.THRESHOLD_ATS:
+            # Verificar que evidencia Tier 1 está presente en el CV
+            if evidence_map and attempt < max_attempts:
+                missing = verify_evidence(result["cv_text"], evidence_map)
+                if missing:
+                    print(f"[CVRewriter] Tier 1 faltante: {missing} — reintentando")
+                    fb = ("EVIDENCE GAP: The following Tier 1 evidence is missing from the CV — "
+                          "include it explicitly: " + "; ".join(missing))
+                    result = _rewrite_once(cv_enriched, job, prev,
+                                           evidence_map=evidence_map, auditor_feedback=fb)
             break
 
         prev     = score
         cv_plain = result["cv_text"]
 
-    result["attempts"]   = attempt
-    result["passed_ats"] = result["ats_score"] >= config.THRESHOLD_ATS
+    result["attempts"]    = attempt
+    result["passed_ats"]  = result["ats_score"] >= config.THRESHOLD_ATS
+    result["poor_fit"]    = False
+    result["poor_fit_reason"] = ""
     return result
 
 

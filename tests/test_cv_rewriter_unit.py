@@ -263,6 +263,7 @@ class TestRewriteRetryLogic:
         with (
             patch("agents.cv_rewriter._get_client", side_effect=_fake_get_client),
             patch("agents.cv_rewriter._enrich_with_narratives", side_effect=lambda t, r: t),
+            patch("agents.cv_rewriter.build_evidence_map", return_value={}),
         ):
             return rewrite(_CV_DICT, _JOB, rama="C")
 
@@ -288,6 +289,7 @@ class TestRewriteRetryLogic:
         with (
             patch("agents.cv_rewriter._get_client", return_value=client),
             patch("agents.cv_rewriter._enrich_with_narratives", side_effect=lambda t, r: t),
+            patch("agents.cv_rewriter.build_evidence_map", return_value={}),
         ):
             result = rewrite(_CV_DICT, _JOB, rama="C")
         assert result["attempts"] == 1, (

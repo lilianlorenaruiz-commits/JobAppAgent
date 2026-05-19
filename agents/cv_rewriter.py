@@ -235,8 +235,7 @@ def _cv_to_plain_text(cv: dict, rama: str = "A") -> str:
         (
             "Amazon DSP programmatic campaign planning for APAC premium brands. "
             "Market scope: APAC only. "
-            "Supports 4 Global Account Executives (Singapore, Sydney, Tokyo) managing "
-            "premium brand accounts with annual sales targets of USD 3M per account."
+            "Supports 4 Global Account Executives (Singapore, Sydney, Tokyo) across APAC."
         ),
     ]
 
@@ -457,6 +456,20 @@ CONTENT AND STRUCTURE
 9. Keep work experience roles in the EXACT order provided, most recent first. \
 Do NOT reorder roles based on relevance.
 10. El headline del PROFESSIONAL PROFILE describe el perfil real de la candidata adaptado al área del cargo — no copia el título exacto del JD. Ejemplo correcto: si el JD es "Category Manager Vestuario", el headline puede ser "Trade Marketing and Category Management Professional | Retail | Ecuador y Colombia".
+
+LEADERSHIP EVIDENCE — MANDATORY FOR SENIOR ROLES
+10b. When the job title contains any of these words: Director, VP, Vice President, Head, Chief, \
+Gerente, Líder de, Manager Senior — you MUST include the Alcalisa team leadership bullet \
+as a KEY ACHIEVEMENT under the Alcalisa S.A. role. The bullet is already in KEY ACHIEVEMENTS \
+under [Alcalisa S.A.]: use it exactly as written. It reads: \
+"Managed a team of 12 direct reports and coordinated 3 external agencies: digital, design and branding, and activations." \
+This bullet establishes verifiable team leadership with headcount and structure. \
+Do NOT paraphrase it, do NOT move it to Skills, do NOT omit it. It must appear as a bullet \
+under Alcalisa S.A. in the WORK EXPERIENCE section.
+10c. For senior roles (Director/VP/Head/Gerente), the PROFESSIONAL PROFILE headline must NOT \
+use "Especialista" or "Specialist". Use "Senior professional", "Leader", "Director", or equivalent \
+senior language aligned to the job area. The seniority language in the headline must match the \
+seniority level of the target role.
 11. Detect the primary language of the job description (job posting). If the job description is primarily in Spanish, write all bullet points and the PROFESSIONAL PROFILE section in Spanish. If it is primarily in English, write them in English. Section headers (PROFESSIONAL PROFILE, WORK EXPERIENCE, EDUCATION, SKILLS, LANGUAGES) always remain in English regardless of the job description language.
 
 FORMATTING
@@ -480,7 +493,11 @@ Prioritize density. Cut redundancy before cutting keywords.
 21. Apply these bullet budgets per role:
     Roles active since 2025 (LinkedIn, Amazon): maximum 5 bullets of 20 words each.
     Roles from 2021 to 2025 (Avanti IT): maximum 3 bullets of 15 words each.
-    Roles before 2021 (Alcalisa, GRC): maximum 2 bullets of 15 words each.
+    Roles before 2021 (Alcalisa, GRC): maximum 3 bullets of 15 words each.
+    EXCEPTION for senior roles (Director/VP/Head/Gerente): Alcalisa may have up to 4 bullets \
+    because it must include the leadership bullet (rule 10b) IN ADDITION to the most relevant \
+    achievement bullets. Never drop the leadership bullet to fit the budget — drop a less \
+    relevant achievement bullet instead.
 22. Professional profile: maximum 50 words.
 23. Page 1 must contain the professional profile and the 2 most recent roles. \
 Page 2 contains all remaining roles, education, skills, and languages. \

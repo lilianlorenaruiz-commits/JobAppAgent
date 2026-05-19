@@ -423,3 +423,51 @@ class TestCvRewriterLanguageDetection:
             "_SYSTEM no menciona mantener headers de sección en inglés.\n"
             "La regla de idioma debe especificar que los headers van en inglés."
         )
+
+
+# ── Ciclo 34 RED→GREEN: evidence_map param en rewrite() ───────────────────────
+
+class TestRewriteEvidenceMapParam:
+    """rewrite() no llama build_evidence_map cuando evidence_map se provee."""
+
+    def test_skips_build_when_evidence_map_provided(self):
+        """build_evidence_map NO se llama cuando evidence_map={} se provee."""
+        from agents.cv_rewriter import rewrite
+        client = _mock_claude_response(_GOOD_RESPONSE)
+        with (
+            patch("agents.cv_rewriter._get_client", return_value=client),
+            patch("agents.cv_rewriter._enrich_with_narratives", side_effect=lambda t, r: t),
+            patch("agents.cv_rewriter.build_evidence_map") as mock_build,
+        ):
+            rewrite(_CV_DICT, _JOB, rama="C", evidence_map={})
+        assert not mock_build.called, (
+            "build_evidence_map fue llamado aunque se proveyó evidence_map={}"
+        )
+
+    def test_no_poor_fit_when_empty_evidence_map_provided(self):
+        """evidence_map={} provisto directamente → poor_fit=False (sin check interno)."""
+        from agents.cv_rewriter import rewrite
+        client = _mock_claude_response(_GOOD_RESPONSE)
+        with (
+            patch("agents.cv_rewriter._get_client", return_value=client),
+            patch("agents.cv_rewriter._enrich_with_narratives", side_effect=lambda t, r: t),
+            patch("agents.cv_rewriter.build_evidence_map", return_value={}),
+        ):
+            result = rewrite(_CV_DICT, _JOB, rama="C", evidence_map={})
+        assert result["poor_fit"] is False, (
+            f"poor_fit debería ser False cuando evidence_map={{}}, got {result['poor_fit']}"
+        )
+
+    def test_backward_compatible_no_evidence_map(self):
+        """rewrite() sin evidence_map llama build_evidence_map internamente."""
+        from agents.cv_rewriter import rewrite
+        client = _mock_claude_response(_GOOD_RESPONSE)
+        with (
+            patch("agents.cv_rewriter._get_client", return_value=client),
+            patch("agents.cv_rewriter._enrich_with_narratives", side_effect=lambda t, r: t),
+            patch("agents.cv_rewriter.build_evidence_map", return_value={}) as mock_build,
+        ):
+            rewrite(_CV_DICT, _JOB, rama="C")  # sin evidence_map
+        assert mock_build.called, (
+            "build_evidence_map debería llamarse cuando evidence_map no se provee"
+        )

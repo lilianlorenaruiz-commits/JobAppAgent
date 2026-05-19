@@ -510,10 +510,21 @@ def rewrite(
     rama: str,
     auditor_feedback: str = "",
     previous_cv_text: str = "",
+    evidence_map: dict | None = None,
 ) -> dict:
     """
     Reescribe el CV optimizado para ATS usando evidence mapping.
     Hasta MAX_ATTEMPTS si score < 95 y no es poor fit.
+
+    Args:
+        cv:               dict del CV (de cv_parser).
+        job:              dict del cargo {"cargo", "empresa", "descripcion", ...}.
+        rama:             "A" | "B" | "C".
+        auditor_feedback: feedback del auditor para ciclos posteriores.
+        previous_cv_text: CV mejorado del ciclo anterior (carry-forward).
+        evidence_map:     Si se provee (no None), se usa directamente sin llamar a
+                          build_evidence_map internamente. poor_fit no se chequea
+                          adentro — el caller (main.py) ya lo hizo.
 
     Returns:
         {
@@ -522,50 +533,53 @@ def rewrite(
             "keywords_added":  list,
             "attempts":        int,
             "passed_ats":      bool,
-            "poor_fit":        bool,   # True si JD tiene > POOR_FIT_THRESHOLD skills Tier 3
+            "poor_fit":        bool,
             "poor_fit_reason": str,
         }
     """
     import json
 
-    # Cargar narrativas
-    narrativas_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "..", "narrativas", "narrativas_lorena.json",
-    )
-    narrativas = {}
-    try:
-        with open(narrativas_path, encoding="utf-8") as f:
-            narrativas = json.load(f)
-    except Exception as e:
-        print(f"[CVRewriter] narrativas no disponibles: {e}")
-
-    # Construir evidence map
-    evidence_map = {}
-    if job.get("descripcion") and narrativas:
+    if evidence_map is None:
+        # Comportamiento original: cargar narrativas y construir evidence_map internamente.
+        narrativas_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "narrativas", "narrativas_lorena.json",
+        )
+        narrativas = {}
         try:
-            evidence_map = build_evidence_map(job["descripcion"], narrativas)
-            tier3_count = sum(1 for v in evidence_map.values() if v["tier"] == 3)
-            print(f"[CVRewriter] Evidence map: {len(evidence_map)} skills — "
-                  f"{sum(1 for v in evidence_map.values() if v['tier']==1)} T1, "
-                  f"{sum(1 for v in evidence_map.values() if v['tier']==2)} T2, "
-                  f"{tier3_count} T3")
-            # Poor fit: demasiados skills sin evidencia → un intento y retorna con flag
-            if tier3_count > POOR_FIT_THRESHOLD:
-                print(f"[CVRewriter] POOR FIT: {tier3_count} skills sin evidencia")
-                is_carry = bool(previous_cv_text)
-                cv_plain = previous_cv_text if is_carry else _cv_to_plain_text(cv, rama)
-                cv_enriched = cv_plain if is_carry else _enrich_with_narratives(cv_plain, rama)
-                result = _rewrite_once(cv_enriched, job, None,
-                                       evidence_map=evidence_map,
-                                       auditor_feedback=auditor_feedback)
-                result["attempts"] = 1
-                result["passed_ats"] = result["ats_score"] >= config.THRESHOLD_ATS
-                result["poor_fit"] = True
-                result["poor_fit_reason"] = f"{tier3_count} skills del JD sin evidencia en narrativas"
-                return result
+            with open(narrativas_path, encoding="utf-8") as f:
+                narrativas = json.load(f)
         except Exception as e:
-            print(f"[CVRewriter] evidence_mapper error: {e} — continuando sin mapa")
+            print(f"[CVRewriter] narrativas no disponibles: {e}")
+
+        built_map = {}
+        if job.get("descripcion") and narrativas:
+            try:
+                built_map = build_evidence_map(job["descripcion"], narrativas)
+                tier3_count = sum(1 for v in built_map.values() if v["tier"] == 3)
+                print(f"[CVRewriter] Evidence map: {len(built_map)} skills — "
+                      f"{sum(1 for v in built_map.values() if v['tier']==1)} T1, "
+                      f"{sum(1 for v in built_map.values() if v['tier']==2)} T2, "
+                      f"{tier3_count} T3")
+                if tier3_count > POOR_FIT_THRESHOLD:
+                    print(f"[CVRewriter] POOR FIT: {tier3_count} skills sin evidencia")
+                    is_carry = bool(previous_cv_text)
+                    cv_plain = previous_cv_text if is_carry else _cv_to_plain_text(cv, rama)
+                    cv_enriched = cv_plain if is_carry else _enrich_with_narratives(cv_plain, rama)
+                    result = _rewrite_once(cv_enriched, job, None,
+                                           evidence_map=built_map,
+                                           auditor_feedback=auditor_feedback)
+                    result["attempts"] = 1
+                    result["passed_ats"] = result["ats_score"] >= config.THRESHOLD_ATS
+                    result["poor_fit"] = True
+                    result["poor_fit_reason"] = (
+                        f"{tier3_count} skills del JD sin evidencia en narrativas"
+                    )
+                    return result
+            except Exception as e:
+                print(f"[CVRewriter] evidence_mapper error: {e} — continuando sin mapa")
+        evidence_map = built_map
+    # else: evidence_map fue provisto — usarlo directamente, sin poor_fit check interno.
 
     is_carry_forward = bool(previous_cv_text)
     cv_plain    = previous_cv_text if is_carry_forward else _cv_to_plain_text(cv, rama)

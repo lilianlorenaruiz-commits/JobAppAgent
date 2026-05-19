@@ -304,6 +304,35 @@ def _load_bullets_por_rol() -> dict | None:
 _USD_RE = re.compile(r"\bUSD\s*[\d,]+(?:\.\d+)?(?:\s*[KkMm])?\b", re.IGNORECASE)
 
 
+def _load_ats_threshold(rama: str) -> int:
+    """
+    Lee threshold_ats del perfil JSON de la rama dada.
+
+    Rama A y B: 92% (bajado de 95% — controles RC-0 a RC-6 garantizan calidad).
+    Rama C: 95% (Paid Media alcanza 95% de forma consistente).
+    Fallback a config.THRESHOLD_ATS si el archivo no existe o no tiene el campo.
+    """
+    import json
+    names = {
+        "A": "perfil_a_consultoria.json",
+        "B": "perfil_b_retail.json",
+        "C": "perfil_c_paidmedia.json",
+    }
+    filename = names.get(rama.upper())
+    if not filename:
+        return config.THRESHOLD_ATS
+    path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "profiles", filename,
+    )
+    try:
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        return int(perfil.get("threshold_ats", config.THRESHOLD_ATS))
+    except Exception:
+        return config.THRESHOLD_ATS
+
+
 def _extract_jd_usd_amounts(jd_text: str) -> list[str]:
     """
     Extrae montos USD del texto del JD para bloquearlos en el prompt.
@@ -659,6 +688,9 @@ def rewrite(
     """
     import json
 
+    # Umbral ATS por perfil (A/B: 92%, C: 95%)
+    _ats_threshold = _load_ats_threshold(rama)
+
     if evidence_map is None:
         # Comportamiento original: cargar narrativas y construir evidence_map internamente.
         narrativas_path = os.path.join(
@@ -690,7 +722,7 @@ def rewrite(
                                            evidence_map=built_map,
                                            auditor_feedback=auditor_feedback)
                     result["attempts"] = 1
-                    result["passed_ats"] = result["ats_score"] >= config.THRESHOLD_ATS
+                    result["passed_ats"] = result["ats_score"] >= _ats_threshold
                     result["poor_fit"] = True
                     result["poor_fit_reason"] = (
                         f"{tier3_count} skills del JD sin evidencia en narrativas"
@@ -721,7 +753,7 @@ def rewrite(
         for _w in _warn_orphan_claims(result["cv_text"], _bpr):
             print(f"[CVRewriter] ⚠️  ORPHAN CLAIM: {_w}")
 
-        if score >= config.THRESHOLD_ATS:
+        if score >= _ats_threshold:
             # Verificar que evidencia Tier 1 está presente en el CV
             if evidence_map and attempt < max_attempts:
                 missing = verify_evidence(result["cv_text"], evidence_map)
@@ -737,7 +769,7 @@ def rewrite(
         cv_plain = result["cv_text"]
 
     result["attempts"]    = attempt
-    result["passed_ats"]  = result["ats_score"] >= config.THRESHOLD_ATS
+    result["passed_ats"]  = result["ats_score"] >= _ats_threshold
     result["poor_fit"]    = False
     result["poor_fit_reason"] = ""
     return result

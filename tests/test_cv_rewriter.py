@@ -500,3 +500,77 @@ class TestThresholdProfiles:
         assert perfil["threshold_match"] == 75, (
             f"Rama C threshold esperado 75, encontrado {perfil['threshold_match']}"
         )
+
+
+# ── Threshold ATS Rama A y B (95→92) ──────────────────────────────────────────
+
+class TestThresholdAtsProfiles:
+    """
+    threshold_ats para Rama A y B baja de 95% a 92%.
+
+    Justificación: con evidence map + narrativas + RC-0 a RC-6, un CV al 92% tiene
+    17-18 skills T1, 0 orphan claims y pasa el auditor independiente como segundo filtro.
+    El 95% fue calibrado antes de que existieran esos controles de calidad.
+    Acalibrar a 92%:
+      - Grupo Éxito (B): ATS 93% → PASS inmediato
+      - Accenture (A):  ATS 91-92% → PASS o muy cerca del umbral
+    Rama C no cambia: 95% ya era alcanzable de forma consistente en Paid Media.
+    """
+
+    def test_rama_a_threshold_ats_is_92(self):
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_a_consultoria.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_ats"] == 92, (
+            f"Rama A threshold_ats esperado 92, encontrado {perfil['threshold_ats']}"
+        )
+
+    def test_rama_b_threshold_ats_is_92(self):
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_b_retail.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_ats"] == 92, (
+            f"Rama B threshold_ats esperado 92, encontrado {perfil['threshold_ats']}"
+        )
+
+    def test_rama_c_threshold_ats_unchanged_95(self):
+        """Rama C conserva threshold_ats = 95 — Paid Media alcanza 95% de forma consistente."""
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_c_paidmedia.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_ats"] == 95, (
+            f"Rama C threshold_ats esperado 95, encontrado {perfil['threshold_ats']}"
+        )
+
+    def test_load_ats_threshold_returns_92_for_rama_a(self):
+        """_load_ats_threshold('A') retorna 92 después del cambio."""
+        from agents.cv_rewriter import _load_ats_threshold
+        assert _load_ats_threshold("A") == 92, (
+            f"_load_ats_threshold('A') esperado 92, encontrado {_load_ats_threshold('A')}"
+        )
+
+    def test_load_ats_threshold_returns_92_for_rama_b(self):
+        """_load_ats_threshold('B') retorna 92 después del cambio."""
+        from agents.cv_rewriter import _load_ats_threshold
+        assert _load_ats_threshold("B") == 92, (
+            f"_load_ats_threshold('B') esperado 92, encontrado {_load_ats_threshold('B')}"
+        )
+
+    def test_load_ats_threshold_returns_95_for_rama_c(self):
+        """_load_ats_threshold('C') retorna 95 — Rama C no cambia."""
+        from agents.cv_rewriter import _load_ats_threshold
+        assert _load_ats_threshold("C") == 95, (
+            f"_load_ats_threshold('C') esperado 95, encontrado {_load_ats_threshold('C')}"
+        )

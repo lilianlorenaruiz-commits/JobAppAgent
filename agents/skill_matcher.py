@@ -24,6 +24,7 @@ import anthropic
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 from agents.cv_parser import parse_cv
+from agents.evidence_mapper import load_narrativas
 
 _client: anthropic.Anthropic | None = None
 
@@ -54,8 +55,13 @@ def _load_profile(rama: str) -> dict:
         return json.load(f)
 
 
-def _cv_to_text(cv: dict) -> str:
-    """Aplana el dict del CV a texto plano para matching."""
+def _cv_to_text(cv: dict, narrativas: dict | None = None) -> str:
+    """Aplana el dict del CV a texto plano para matching.
+
+    Si se proveen narrativas, suplementa con bullets verificados de
+    bullets_por_rol para capturar contexto sectorial que el PDF genérico
+    omite (ej: licores/spirits/HORECA en Alcalisa, artesanal en Enzalsarte).
+    """
     parts = [f"Name: {cv['nombre']}"]
     for exp in cv.get("experiencia", []):
         parts.append(f"Role: {exp['cargo']} at {exp['empresa']} ({exp['fecha']})")
@@ -65,6 +71,24 @@ def _cv_to_text(cv: dict) -> str:
         parts.append(f"Education: {edu['titulo']} — {edu['institucion']}")
     parts.append("Skills: " + ", ".join(cv.get("skills", [])))
     parts.append("Languages: " + ", ".join(cv.get("idiomas", [])))
+
+    # Suplementar con bullets verificados de narrativas
+    bullets_por_rol = (narrativas or {}).get("bullets_por_rol", {})
+    if bullets_por_rol:
+        parts.append("\n--- VERIFIED CAREER NARRATIVE ---")
+        for rol_data in bullets_por_rol.values():
+            if not isinstance(rol_data, dict):
+                continue
+            bullets = rol_data.get("bullets", [])
+            if not bullets:
+                continue
+            empresa = rol_data.get("empresa", "")
+            periodo = rol_data.get("periodo", "")
+            header = f"\n[{empresa}]" + (f" — {periodo}" if periodo else "")
+            parts.append(header)
+            for b in bullets:
+                parts.append(f"• {b}")
+
     return "\n".join(parts)
 
 
@@ -157,7 +181,8 @@ def analyze(cv: dict, job: dict, rama: str) -> dict:
         }
     """
     perfil = _load_profile(rama)
-    cv_text = _cv_to_text(cv)
+    narrativas = load_narrativas()
+    cv_text = _cv_to_text(cv, narrativas)
 
     kw_score, matched, gaps = _keyword_score(
         cv_text, job.get("descripcion", ""), perfil["skills_target"]

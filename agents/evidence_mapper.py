@@ -13,6 +13,7 @@ Constante de configuración:
 """
 import os
 import sys
+import json
 
 import anthropic
 
@@ -20,6 +21,28 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
 
 POOR_FIT_THRESHOLD = 5
+
+_DEFAULT_NARRATIVAS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "narrativas", "narrativas_lorena.json",
+)
+
+
+def load_narrativas(path: str | None = None) -> dict:
+    """
+    Carga narrativas_lorena.json. Retorna {} si el archivo no existe o hay error.
+
+    Args:
+        path: Ruta al archivo JSON. Si None, usa _DEFAULT_NARRATIVAS_PATH.
+    """
+    target = path or _DEFAULT_NARRATIVAS_PATH
+    try:
+        with open(target, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[EvidenceMapper] narrativas no disponibles ({target}): {e}")
+        return {}
+
 
 _client: anthropic.Anthropic | None = None
 

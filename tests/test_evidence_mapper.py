@@ -267,3 +267,37 @@ class TestVerifyEvidence:
         from agents.evidence_mapper import verify_evidence
         result = verify_evidence("cualquier CV text", {})
         assert result == []
+
+
+# ── Tests: load_narrativas ──────────────────────────────────────────────────────
+
+class TestLoadNarrativas:
+    def test_returns_dict_when_file_exists(self, tmp_path):
+        """load_narrativas(path) retorna un dict cuando el archivo existe."""
+        import json
+        from agents.evidence_mapper import load_narrativas
+        p = tmp_path / "narrativas.json"
+        p.write_text(json.dumps({"roles": [], "plataformas": {}}), encoding="utf-8")
+        result = load_narrativas(str(p))
+        assert isinstance(result, dict)
+        assert "roles" in result
+
+    def test_returns_empty_dict_when_file_not_found(self):
+        """load_narrativas() retorna {} si el archivo no existe."""
+        from agents.evidence_mapper import load_narrativas
+        result = load_narrativas("/nonexistent/path/narrativas.json")
+        assert result == {}
+
+    def test_returns_empty_dict_on_json_error(self, tmp_path):
+        """load_narrativas() retorna {} si el JSON es inválido."""
+        from agents.evidence_mapper import load_narrativas
+        p = tmp_path / "bad.json"
+        p.write_text("not valid json", encoding="utf-8")
+        result = load_narrativas(str(p))
+        assert result == {}
+
+    def test_default_path_returns_dict(self):
+        """load_narrativas() sin path retorna dict (con o sin archivo real)."""
+        from agents.evidence_mapper import load_narrativas
+        result = load_narrativas()
+        assert isinstance(result, dict)

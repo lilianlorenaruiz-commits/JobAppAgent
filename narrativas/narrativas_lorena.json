@@ -162,6 +162,19 @@
     "herramientas_analytics": ["Tableau", "Power BI", "Microsoft Excel", "Amazon DSP", "Amazon Marketing Cloud (AMC)", "LinkedIn Campaign Manager", "LinkedIn Insight Tag"]
   },
 
+  "retail_media_positioning": {
+    "_nota": "Argumento estratégico para cargos de Retail Media / Monetización de audiencias (ej. Cruz Verde, Falabella, Alkosto, Éxito)",
+    "ventaja_buyer_side": "Having managed paid media campaigns directly on Amazon DSP, Meta Ads, Google Ads, and LinkedIn Ads as a brand advertiser, Lorena understands exactly what brand marketing teams need from a retail media network: precise audience targeting, measurable attribution, transparent reporting, and ROAS optimization. This buyer-side expertise is a strategic advantage when building or leading a retail media unit — she designs ad products that advertisers actually want to buy, speaks the language of brand managers, and can negotiate media packages from a position of operational credibility.",
+    "doble_perspectiva": "At Alcalisa S.A. (2013-2018), Lorena was the brand/advertiser negotiating visibility, shelf space, and promotional investment with retail chains (Supermaxi, Coral, Tía, Santa María). This is the exact relationship that a Director of Retail Media at Cruz Verde would manage — but now from the retailer's side. She has sat at both sides of that negotiating table.",
+    "plataformas_que_dominan_retail_media": [
+      "Amazon DSP (programmatic, audience segments, frequency capping, attribution via AMC) — directly operated",
+      "Meta Ads (off-site retargeting, lookalike audiences, conversion campaigns) — directly operated",
+      "Google Ads (search, display, Performance Max) — directly operated",
+      "LinkedIn Ads (B2B sponsored content, lead gen) — directly operated, 300+ accounts"
+    ],
+    "bullet_retail_media_positioning": "Brings buyer-side expertise across Amazon DSP, Meta Ads, Google Ads, and LinkedIn Ads — enabling design of retail media ad products that align with what brand advertisers measure, optimize, and report to their C-suite."
+  },
+
   "brand_strategy": {
     "proyecto_mas_grande": "GRC S.A. — creación y posicionamiento de 3 marcas de vino español para exportación a China y Rusia (arquitectura de marca, naming, packaging, storytelling, estrategia B2B para distribuidores)",
     "presupuesto_marketing_anual_usd": {
@@ -291,7 +304,8 @@
       "mercado": "Latin America ONLY. NEVER write APAC or Singapore/Sydney/Tokyo for this role.",
       "bullets": [
         "Manages and optimizes LinkedIn Ads campaigns for more than 300 B2B enterprise accounts across Latin America with a monthly portfolio of USD 240,000, executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives.",
-        "ThinkOnward campaign (March 2026, Latin America): USD 200 investment generated 198,752 impressions, reaching 84,129 unique professionals in Earth Sciences and Data Science. CPC USD 0.96, CPM USD 1.01, CTR 0.105 percent."
+        "ThinkOnward campaign (March 2026, Latin America): USD 200 investment generated 198,752 impressions, reaching 84,129 unique professionals in Earth Sciences and Data Science. CPC USD 0.96, CPM USD 1.01, CTR 0.105 percent.",
+        "Applies buyer-side expertise across LinkedIn Ads, Meta Ads, Google Ads, and Amazon DSP to design audience strategies that align with what brand advertisers measure and report to their C-suite — directly transferable to building retail media ad products and brand partnerships."
       ]
     },
     "amazon": {
@@ -330,7 +344,8 @@
         "Achieved 100 percent portfolio codification (6 to 8 SKUs) across Supermaxi, Coral, Tia, and Santa Maria by end of 2018.",
         "Trained more than 150 people per year: regional distributors, bartenders, and HORECA staff at 5-star hotels.",
         "Managed a team of 12 direct reports and coordinated 3 external agencies: digital, design and branding, and activations.",
-        "Implemented Power BI sales reporting integrating retail chain and distributor data, replacing manual Excel-based processes."
+        "Implemented Power BI sales reporting integrating retail chain and distributor data, replacing manual Excel-based processes.",
+        "Negotiated on-site visibility, promotional placement, and co-investment agreements directly with retail chains Supermaxi, Coral, Tia, and Santa Maria as a brand advertiser — providing first-hand understanding of how brands evaluate and buy retail media inventory from the buyer side."
       ]
     },
     "grc": {

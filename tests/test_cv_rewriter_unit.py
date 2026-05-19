@@ -471,3 +471,208 @@ class TestRewriteEvidenceMapParam:
         assert mock_build.called, (
             "build_evidence_map debería llamarse cuando evidence_map no se provee"
         )
+
+
+# ── RC-0: Amazon debe estar hardcodeado con fecha canónica ────────────────────
+
+class TestCvToPlainTextAmazonHardcoded:
+
+    def test_amazon_date_canonical_in_output(self):
+        """_cv_to_plain_text() debe incluir _AMAZON_DATE sin importar lo que diga cv['experiencia']."""
+        from agents.cv_rewriter import _cv_to_plain_text, _AMAZON_DATE
+        # CV sin Amazon en experiencia (caso smoke test sintético)
+        cv = {
+            "nombre": "Test",
+            "experiencia": [
+                {
+                    "cargo":   "Digital Channels Consultant",
+                    "empresa": "Avanti IT SAS",
+                    "fecha":   "August 2021 – April 2025",
+                    "descripcion": "SENTINEL",
+                }
+            ],
+            "educacion": [],
+            "skills":    [],
+            "idiomas":   [],
+        }
+        result = _cv_to_plain_text(cv, "C")
+        assert _AMAZON_DATE in result, (
+            f"_AMAZON_DATE '{_AMAZON_DATE}' debe aparecer siempre en el output, "
+            f"incluso cuando Amazon no está en cv['experiencia']. "
+            f"Obtenido (primeros 600 chars):\n{result[:600]}"
+        )
+
+    def test_amazon_not_duplicated_when_in_experiencia(self):
+        """Si Amazon viene en cv['experiencia'], no debe aparecer dos veces."""
+        from agents.cv_rewriter import _cv_to_plain_text, _AMAZON_DATE
+        cv = {
+            "nombre": "Test",
+            "experiencia": [
+                {
+                    "cargo":   "Campaign Planner Contractor",
+                    "empresa": "Amazon, Colombia",
+                    "fecha":   "May 2025 - current working",
+                    "descripcion": "Campaign Management across APAC.",
+                }
+            ],
+            "educacion": [],
+            "skills":    [],
+            "idiomas":   [],
+        }
+        result = _cv_to_plain_text(cv, "C")
+        count = result.count(_AMAZON_DATE)
+        assert count == 1, (
+            f"_AMAZON_DATE debe aparecer exactamente una vez. Aparece {count} veces."
+        )
+
+
+# ── RC-1: _cv_to_plain_text no debe incluir exp["descripcion"] ────────────────
+
+class TestCvToPlainTextStripsDescripcion:
+
+    def test_descripcion_not_in_plain_text(self):
+        """exp['descripcion'] NO debe aparecer en _cv_to_plain_text().
+        El contenido del rol viene de bullets_por_rol via _enrich_with_narratives()."""
+        from agents.cv_rewriter import _cv_to_plain_text
+        cv = {
+            "nombre": "Test",
+            "experiencia": [{
+                "cargo":       "Digital Channels Consultant",
+                "empresa":     "Avanti IT SAS",
+                "fecha":       "August 2021 – April 2025",
+                "descripcion": "SENTINEL_HALLUCINACION Meta Ads Google Ads USD 200K ROAS CPA",
+            }],
+            "educacion": [],
+            "skills":    [],
+            "idiomas":   [],
+        }
+        result = _cv_to_plain_text(cv, "C")
+        assert "SENTINEL_HALLUCINACION" not in result, (
+            "exp['descripcion'] no debe aparecer en _cv_to_plain_text(). "
+            f"Fragmento obtenido: {result[:400]}"
+        )
+
+    def test_role_metadata_still_present_without_descripcion(self):
+        """cargo, empresa y fecha deben seguir presentes aunque se elimine descripcion."""
+        from agents.cv_rewriter import _cv_to_plain_text
+        cv = {
+            "nombre": "Test",
+            "experiencia": [{
+                "cargo":       "Digital Channels Consultant",
+                "empresa":     "Avanti IT SAS",
+                "fecha":       "August 2021 – April 2025",
+                "descripcion": "SENTINEL",
+            }],
+            "educacion": [],
+            "skills":    [],
+            "idiomas":   [],
+        }
+        result = _cv_to_plain_text(cv, "C")
+        assert "Digital Channels Consultant" in result
+        assert "Avanti IT SAS" in result
+        assert "August 2021" in result
+
+
+# ── RC-2: _SYSTEM debe contener regla de aislamiento de datos del JD ──────────
+
+class TestSystemPromptJdIsolation:
+
+    def test_system_prompt_contains_jd_isolation_rule(self):
+        """_SYSTEM debe prohibir explícitamente inyectar datos del JD sin evidencia en bullets."""
+        from agents.cv_rewriter import _SYSTEM
+        assert "JD DATA ISOLATION" in _SYSTEM, (
+            "_SYSTEM no contiene la regla 'JD DATA ISOLATION'. "
+            "Agrega la regla 6c después del bloque 6b en _SYSTEM."
+        )
+        # Verifica que la regla prohíbe explícitamente el uso de cifras del JD
+        assert "NOT facts" in _SYSTEM or "not facts" in _SYSTEM.lower(), (
+            "La regla 6c debe dejar claro que los datos del JD no son hechos inyectables."
+        )
+
+
+# ── RC-3: _fix_static_fields() debe corregir fecha Amazon sin "May" ───────────
+
+class TestFixStaticFieldsAmazonDate:
+
+    def test_amazon_date_fixed_when_may_dropped(self):
+        """'2025 – Present' (LLM omitió 'May') debe corregirse a la fecha canónica."""
+        from agents.cv_rewriter import _fix_static_fields, _AMAZON_DATE
+        cv_text = (
+            "Campaign Planner, Amazon Ads\n"
+            "2025 – Present | Bogotá\n"
+            "Amazon, Colombia\n"
+            "- Managed campaigns.\n"
+        )
+        result = _fix_static_fields(cv_text)
+        assert "2025 – Present" not in result, (
+            f"'2025 – Present' debe reemplazarse por la fecha canónica. Obtenido:\n{result}"
+        )
+        assert _AMAZON_DATE in result, (
+            f"La fecha canónica '{_AMAZON_DATE}' debe aparecer. Obtenido:\n{result}"
+        )
+
+    def test_amazon_date_fixed_when_february_2026_variant(self):
+        """'2025 – February 2026' también debe corregirse."""
+        from agents.cv_rewriter import _fix_static_fields, _AMAZON_DATE
+        cv_text = "Campaign Planner, Amazon Ads\n2025 – February 2026 | Bogotá\n"
+        result = _fix_static_fields(cv_text)
+        assert "2025 – February 2026" not in result
+        assert _AMAZON_DATE in result
+
+    def test_canonical_amazon_date_unchanged(self):
+        """La forma canónica 'May 2025 – Feb 2026' debe mantenerse correcta."""
+        from agents.cv_rewriter import _fix_static_fields, _AMAZON_DATE
+        cv_text = f"Campaign Planner\n{_AMAZON_DATE}\nAmazon, Colombia\n"
+        result = _fix_static_fields(cv_text)
+        assert _AMAZON_DATE in result
+
+
+# ── RC-4: _warn_orphan_claims() detecta montos USD huérfanos ──────────────────
+
+class TestWarnOrphanClaims:
+
+    def test_flags_usd_amount_not_in_any_bullet(self):
+        """USD amount en CV ausente de todos los bullets → warning en lista."""
+        from agents.cv_rewriter import _warn_orphan_claims
+        bullets_por_rol = {
+            "avanti": {
+                "empresa": "Avanti IT SAS",
+                "bullets": ["Managed Chatico: 575,134 conversations in 9 months."],
+            }
+        }
+        cv_text = "- Managed campaigns with USD 999,999 monthly budget."
+        warnings = _warn_orphan_claims(cv_text, bullets_por_rol)
+        assert len(warnings) > 0, (
+            "Debe haber al menos un warning para USD 999,999 no presente en bullets."
+        )
+        assert any("999" in w for w in warnings), (
+            f"El warning debe mencionar la cifra huérfana. Warnings: {warnings}"
+        )
+
+    def test_no_warning_for_authorized_usd(self):
+        """USD amount presente en bullets → no warning."""
+        from agents.cv_rewriter import _warn_orphan_claims
+        bullets_por_rol = {
+            "linkedin": {
+                "empresa": "Teleperformance",
+                "bullets": ["Manages 300 accounts with monthly portfolio USD 240,000."],
+            }
+        }
+        cv_text = "- Manages portfolio of USD 240,000 monthly."
+        warnings = _warn_orphan_claims(cv_text, bullets_por_rol)
+        assert not any("240" in w for w in warnings), (
+            f"USD 240,000 está en bullets — no debe generar warning. Warnings: {warnings}"
+        )
+
+    def test_returns_empty_when_bullets_por_rol_is_none(self):
+        """Con bullets_por_rol=None no debe lanzar excepción ni devolver warnings."""
+        from agents.cv_rewriter import _warn_orphan_claims
+        result = _warn_orphan_claims("- USD 999,999 budget.", None)
+        assert result == [], f"Esperado [], obtenido {result}"
+
+    def test_returns_empty_when_no_usd_in_cv(self):
+        """Sin montos USD en el CV, retorna lista vacía."""
+        from agents.cv_rewriter import _warn_orphan_claims
+        bullets_por_rol = {"avanti": {"empresa": "Avanti IT SAS", "bullets": ["Led chatbot."]}}
+        result = _warn_orphan_claims("- Led conversational flow optimization.", bullets_por_rol)
+        assert result == []

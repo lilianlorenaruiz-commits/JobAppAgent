@@ -150,9 +150,15 @@ def _fix_static_fields(cv_text: str) -> str:
     cv_text = head_fixed + tail
 
     # 2. Enforce Amazon role date — always override whatever the LLM wrote.
-    #    Matches any "May 2025 – <anything>" line (including "Present" if LLM hallucinates it).
+    #    Primary:  "May 2025 – <anything>" — forma canónica y "May 2025 – Present".
+    #    Fallback: "2025 – Present" o "2025 – Feb(ruary) 2026" — LLM omitió "May".
     cv_text = re.sub(
         r"May\s+2025\s*[–\-]\s*[^\n]+",
+        _AMAZON_DATE,
+        cv_text,
+    )
+    cv_text = re.sub(
+        r"\b2025\s*[–\-]\s*(?:Present|Feb(?:ruary)?\s+2026)\b[^\n]*",
         _AMAZON_DATE,
         cv_text,
     )
@@ -218,15 +224,38 @@ def _cv_to_plain_text(cv: dict, rama: str = "A") -> str:
         ),
     ]
 
+    # ── Rol Amazon (hardcodeado — PDF dice "current working"; fecha real es Feb 2026) ──
+    # MARKET: APAC ONLY. Do NOT mention Latin America for this role.
+    # Global Account Executives in Singapore, Sydney, Tokyo belong HERE ONLY.
+    lines += [
+        "",
+        "Campaign Planner Contractor",
+        "Amazon, Colombia",
+        f"{_AMAZON_DATE}  |  Bogotá",
+        (
+            "Amazon DSP programmatic campaign planning for APAC premium brands. "
+            "Market scope: APAC only. "
+            "Supports 4 Global Account Executives (Singapore, Sydney, Tokyo) managing "
+            "premium brand accounts with annual sales targets of USD 3M per account."
+        ),
+    ]
+
+    # ── Roles históricos del PDF (Avanti, Alcalisa, Nexura, GRC) ──
+    # Filtrar Amazon para evitar duplicado (viene del PDF con fecha incorrecta).
+    _AMAZON_EMPRESA_KEYS = {"amazon", "amazon, colombia"}
     for exp in cv.get("experiencia", []):
+        empresa_lower = (exp.get("empresa") or "").lower().strip()
+        if empresa_lower in _AMAZON_EMPRESA_KEYS:
+            continue  # Ya hardcodeado arriba con fecha canónica
         lines.append("")
         lines.append(exp["cargo"])
         if exp.get("empresa"):
             lines.append(exp["empresa"])
         fecha = _normalize_fecha(exp.get("fecha", ""))
         lines.append(fecha)
-        if exp.get("descripcion"):
-            lines.append(exp["descripcion"])
+        # exp["descripcion"] omitido intencionalmente.
+        # El contenido del rol viene de bullets_por_rol vía _enrich_with_narratives(),
+        # lo que evita que el LLM amplifique afirmaciones no verificadas del CV fuente.
 
     # EDUCATION — hardcoded ground truth.
     # The PDF text extraction mangles education data (merged fields, encoding errors,
@@ -271,6 +300,37 @@ def _load_bullets_por_rol() -> dict | None:
         return data.get("bullets_por_rol")
     except Exception:
         return None
+
+
+_USD_RE = re.compile(r"\bUSD\s*[\d,]+(?:\.\d+)?(?:\s*[KkMm])?\b", re.IGNORECASE)
+
+
+def _warn_orphan_claims(cv_text: str, bullets_por_rol: dict | None) -> list[str]:
+    """
+    Detecta montos USD en el CV generado que no aparecen en ningún bullet de bullets_por_rol.
+    No-blocking: retorna lista de strings descriptivos para logging. No rechaza el CV.
+    Retorna [] si bullets_por_rol es None o vacío.
+    """
+    if not bullets_por_rol:
+        return []
+
+    # Texto completo de todos los bullets (minúsculas para comparación)
+    all_bullet_text = " ".join(
+        b
+        for rol in bullets_por_rol.values()
+        if isinstance(rol, dict)
+        for b in rol.get("bullets", [])
+    ).lower()
+    authorized = set(_USD_RE.findall(all_bullet_text))
+
+    # Montos USD encontrados en el CV generado
+    cv_usd = set(_USD_RE.findall(cv_text.lower()))
+    orphan = cv_usd - authorized
+
+    return [
+        f"USD amount '{amt}' in CV has no matching bullet in bullets_por_rol"
+        for amt in sorted(orphan)
+    ]
 
 
 def _enrich_with_narratives(cv_plain: str, rama: str) -> str:
@@ -382,6 +442,14 @@ funnel format, Global Account Executives APAC) must ONLY appear under the Amazon
    Bullets from [Teleperformance / LinkedIn Marketing Solutions] (300 accounts, USD 240,000 portfolio, \
 ThinkOnward, Latin America) must ONLY appear under the LinkedIn/Teleperformance role.
    If a bullet is not listed under an employer, omit it. Never fabricate or borrow from another section.
+
+6c. JD DATA ISOLATION: Metrics, USD amounts, percentages, platform names, and tool names \
+from the JOB DESCRIPTION are targets to match using existing evidence — they are NOT facts \
+to inject. Never use a figure or tool name from the JD as a claim in a role's CV section \
+unless it already appears verbatim or numerically in that role's section within KEY ACHIEVEMENTS. \
+If the JD mentions a tool (e.g. Google Analytics) or a budget figure (e.g. USD 150,000) that \
+has no matching bullet under that role in KEY ACHIEVEMENTS, omit it entirely. \
+Do not fabricate evidence to satisfy JD requirements.
 
 CONTENT AND STRUCTURE
 7. Redacta cada skill usando exactamente los hechos listados en su fila del EVIDENCE MAP — ningún dato adicional. No busques ni inventes evidencia fuera del mapa. Tier 1: narrativa de transferencia completa con verbo activo, contexto y resultado. Tier 2: lenguaje de exposición ("en contexto de", "a través de", "con exposición a"). Skill con [Tier 3 — omitir del CV]: no lo menciones bajo ningún concepto.
@@ -595,6 +663,11 @@ def rewrite(
         result = _rewrite_once(source, job, prev, evidence_map=evidence_map, auditor_feedback=fb)
         score  = result["ats_score"]
         print(f"[CVRewriter] Score ATS: {score}%")
+
+        # Diagnóstico: montos USD sin evidencia en bullets_por_rol
+        _bpr = _load_bullets_por_rol()
+        for _w in _warn_orphan_claims(result["cv_text"], _bpr):
+            print(f"[CVRewriter] ⚠️  ORPHAN CLAIM: {_w}")
 
         if score >= config.THRESHOLD_ATS:
             # Verificar que evidencia Tier 1 está presente en el CV

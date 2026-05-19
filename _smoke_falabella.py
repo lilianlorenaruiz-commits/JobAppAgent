@@ -71,18 +71,21 @@ _JOB_A = {
 }
 
 # C. Path del SÍ — Paid Media Manager (Rama C)
-# JD conciso para que el ATS rewriter pueda alcanzar 95%+ sin densidad excesiva de keywords
+# JD alineado a evidencias reales de narrativas_lorena.json.
+# Sin "Google Analytics" (no está en narrativas — RC-2 impide inyectarlo).
+# Keywords cubiertos: Meta Ads (Alcalisa T1), Google Ads (GRC T1), Amazon Ads/DSP (Amazon T1),
+# LinkedIn Ads (LinkedIn T1), ROAS (Amazon T1), presupuesto (LinkedIn USD 240K T1).
 _JOB_C = {
     "cargo":       "Paid Media Manager",
     "empresa":     "OMD Colombia",
     "modalidad":   "Híbrido",
     "ubicacion":   "Bogotá",
     "descripcion": (
-        "Buscamos Paid Media Manager con experiencia en Google Ads y Meta Ads. "
-        "Planear y optimizar campañas de performance marketing en plataformas digitales. "
-        "Gestión de presupuesto mensual USD 150K. Reportes con Google Analytics. "
-        "Optimizar ROAS y CPA. Inglés B2 requerido. "
-        "Conocimiento de SEM y Analytics deseable."
+        "Buscamos Paid Media Manager con experiencia en Meta Ads, Google Ads, Amazon Ads y LinkedIn Ads. "
+        "Planear y optimizar campañas de performance marketing y paid media en plataformas digitales. "
+        "Gestión de presupuesto mensual USD 200K+. Optimizar ROAS, CPA y ACOS. "
+        "Experiencia en programmatic advertising y Amazon DSP deseable. "
+        "Inglés C1 requerido. SEM y data analysis."
     ),
     "url":  "https://www.linkedin.com/jobs/view/fake-omd-001",
     "rama": "C",

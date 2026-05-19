@@ -1,5 +1,5 @@
 {
-  "_version": "2026-05-13-v2",
+  "_version": "2026-05-19-v3",
   "_fuente": "cuestionario_lorena.md — respondido por Lorena Ruiz",
   "_nota": "Roles separados explícitamente: LinkedIn/Teleperformance = LATAM. Amazon = APAC. No mezclar mercados.",
 
@@ -59,6 +59,20 @@
         "Alcaldía de Funza (Elikin): Trained local staff to self-manage the bot. Achieved 175 average conversations per day. Proposed transactional flow implementation for fast-query resolution.",
         "Delivered digital channel projects for Superfinanciera (chatbot integrated with internal regulatory databases), IDEAM (AI chatbot for climate information on web), Unidad de Restitución de Tierras (Liferay 6.2 portal), Rama Judicial (Liferay 6.1 to 7.1 migration), and Unisanitas (web portal Liferay).",
         "Developed OCR module with AI for text recognition in documents and images."
+      ]
+    },
+    {
+      "cargo": "Consultora de Mercadeo",
+      "empresa": "Comisariato de las Mascotas (mascotas.com.ec)",
+      "fecha": "Noviembre 2018 – Marzo 2020",
+      "ubicacion": "Quito, Ecuador",
+      "contexto_empresa": "Primera y más grande cadena especializada de pet retail del Ecuador, fundada en 1996. Opera 6 puntos de venta en Quito y Guayaquil, e-commerce, y presencia en plataformas de delivery (Rappi, PedidosYa). Sector en crecimiento: 6 de cada 10 hogares ecuatorianos tienen mascotas.",
+      "tipo_trabajo": "Consultoría externa de marketing — customer experience en tienda, omnicanalidad física-digital, y análisis de customer insights para la cadena líder del sector.",
+      "logros": [
+        "Diseñé e implementé estrategia de customer experience en tienda para los 6 locales a nivel nacional, estandarizando protocolos de atención, señalización y recorrido del cliente en un sector de alto crecimiento (11% YoY).",
+        "Lideré la implementación de un modelo de atención omnicanal integrando canal físico con e-commerce y plataformas de delivery (Rappi/PedidosYa), mejorando la consistencia del servicio entre canales.",
+        "Construí sistema de análisis de customer insights — comportamiento de compra, frecuencia de visita, preferencias por categoría — para personalizar campañas y optimizar mix de producto por local.",
+        "Mejoré indicadores de calidad de servicio en tiendas a nivel nacional mediante capacitación de personal y rediseño del customer journey, logrando mayor retención y satisfacción de clientes en la cadena líder del sector."
       ]
     },
     {
@@ -329,6 +343,17 @@
         "Implemented the first interactive voting system via WhatsApp for participatory budgets at the Alcaldia Mayor de Bogota: 103,785 votes in 60 days with real-time statistics.",
         "Implemented COMFENALCO EPS chatbot during COVID-19: reduced physical consultation load by 80 percent and handled more than 50,000 patients with remote pre-diagnosis.",
         "Improved client satisfaction by 20 percent through conversational flow optimization and personalized interaction strategies."
+      ]
+    },
+    "mascotas": {
+      "empresa": "Comisariato de las Mascotas (mascotas.com.ec)",
+      "periodo": "Noviembre 2018 – Marzo 2020",
+      "_nota": "Consultoría externa. Primera cadena especializada de pet retail del Ecuador. Usar bullets solo en sección de experiencia correspondiente.",
+      "bullets": [
+        "Designed and implemented customer experience strategy across 6 national store locations for Ecuador's leading pet retail chain, standardizing service protocols, in-store navigation, and customer journey in a high-growth sector (11% YoY pet shop growth).",
+        "Led omnichannel integration connecting physical retail with e-commerce and delivery platforms (Rappi, PedidosYa), improving service consistency across channels ahead of the digital acceleration driven by COVID-19.",
+        "Built a customer insights system analyzing purchase behavior, visit frequency, and category preferences to personalize marketing campaigns and optimize product mix by store location.",
+        "Improved national service quality indicators across all store locations through staff training programs and customer journey redesign, increasing client retention and satisfaction for the market's pioneer pet retail brand."
       ]
     },
     "alcalisa": {

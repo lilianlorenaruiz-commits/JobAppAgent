@@ -36,6 +36,7 @@ from agents.ats_auditor  import audit, MAX_AUDIT_CYCLES
 from agents.pdf_generator import generate
 from agents.reporter     import register, send_daily_report, send_alert, get_daily_stats
 from agents.applicator   import apply as aplicar
+from agents.evidence_mapper import load_narrativas, build_evidence_map, POOR_FIT_THRESHOLD
 
 RAMAS = ["A", "B", "C"]
 HORA_DIARIA = "08:00"
@@ -69,6 +70,33 @@ def _process_job(cv: dict, job: dict, rama: str, dry_run: bool = False) -> dict:
         register(job, match, "", resultado="Fallido")
         return resultado
 
+    # 1b. Evidence map — construir ANTES del rewrite para evitar llamada duplicada a Claude.
+    #     Si tier3_count > POOR_FIT_THRESHOLD: poor_fit early exit (ahorra el ciclo de rewrite).
+    #     Si falla: continúa con evidence_map=None (rewrite usa fallback interno).
+    evidence_map = None
+    try:
+        narrativas = load_narrativas()
+        if narrativas and job.get("descripcion"):
+            evidence_map = build_evidence_map(job["descripcion"], narrativas)
+            tier3_count = sum(1 for v in evidence_map.values() if v["tier"] == 3)
+            print(
+                f"  [EvidenceMap] {len(evidence_map)} skills — "
+                f"{sum(1 for v in evidence_map.values() if v['tier'] == 1)} T1, "
+                f"{sum(1 for v in evidence_map.values() if v['tier'] == 2)} T2, "
+                f"{tier3_count} T3"
+            )
+            if tier3_count > POOR_FIT_THRESHOLD:
+                resultado["motivo"] = (
+                    f"Poor fit: {tier3_count} skills del JD sin evidencia "
+                    f"(skill_score {match['score']}%)"
+                )
+                print(f"  [POOR FIT] {job['cargo']} @ {job['empresa']} — {resultado['motivo']}")
+                register(job, match, "", resultado="Fallido")
+                return resultado
+    except Exception as e:
+        print(f"  [EvidenceMap] Error — continuando sin mapa: {e}")
+        evidence_map = None
+
     # 2. CV Rewriting + ATS Audit loop
     audit_result    = None
     rewrite_result  = None
@@ -82,6 +110,7 @@ def _process_job(cv: dict, job: dict, rama: str, dry_run: bool = False) -> dict:
                 cv, job, rama,
                 auditor_feedback=audit_feedback,
                 previous_cv_text=previous_cv_text,
+                evidence_map=evidence_map,
             )
         except Exception as e:
             resultado["motivo"] = f"Error en cv_rewriter (ciclo {cycle}): {e}"
@@ -90,10 +119,16 @@ def _process_job(cv: dict, job: dict, rama: str, dry_run: bool = False) -> dict:
 
         # En ciclos 2+, el CV ya pasó ATS en el ciclo anterior — no bloquear por re-evaluación
         if not rewrite_result["passed_ats"] and cycle == 1:
-            resultado["motivo"] = (
-                f"ATS score bajo ({rewrite_result['ats_score']}% "
-                f"tras {rewrite_result['attempts']} intentos)"
-            )
+            if rewrite_result.get("poor_fit"):
+                resultado["motivo"] = (
+                    f"Poor fit: {rewrite_result['poor_fit_reason']} "
+                    f"(ATS {rewrite_result['ats_score']}%)"
+                )
+            else:
+                resultado["motivo"] = (
+                    f"ATS score bajo ({rewrite_result['ats_score']}% "
+                    f"tras {rewrite_result['attempts']} intentos)"
+                )
             print(f"  [ATS FAIL] {job['cargo']} — {resultado['motivo']}")
             register(job, match, "", resultado="Fallido")
             return resultado

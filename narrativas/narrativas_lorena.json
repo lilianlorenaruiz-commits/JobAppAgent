@@ -1,5 +1,5 @@
 {
-  "_version": "2026-05-19-v3",
+  "_version": "2026-05-19-v4",
   "_fuente": "cuestionario_lorena.md — respondido por Lorena Ruiz",
   "_nota": "Roles separados explícitamente: LinkedIn/Teleperformance = LATAM. Amazon = APAC. No mezclar mercados.",
 
@@ -59,6 +59,37 @@
         "Alcaldía de Funza (Elikin): Trained local staff to self-manage the bot. Achieved 175 average conversations per day. Proposed transactional flow implementation for fast-query resolution.",
         "Delivered digital channel projects for Superfinanciera (chatbot integrated with internal regulatory databases), IDEAM (AI chatbot for climate information on web), Unidad de Restitución de Tierras (Liferay 6.2 portal), Rama Judicial (Liferay 6.1 to 7.1 migration), and Unisanitas (web portal Liferay).",
         "Developed OCR module with AI for text recognition in documents and images."
+      ]
+    },
+    {
+      "cargo": "Fundadora & Brand Manager",
+      "empresa": "Enzalsarte (marca propia)",
+      "fecha": "Marzo 2020 – Agosto 2021",
+      "ubicacion": "Jamundí, Valle del Cauca, Colombia",
+      "contexto": "Año sabático intencional durante la pandemia COVID-19. Cuidado familiar + emprendimiento desde cero. Creación de marca artesanal de panadería orientada a salud y bienestar comunitario en zona rural alejada del casco urbano.",
+      "modelo_negocio": "D2C artesanal: producción diaria → encargos por WhatsApp → entrega a domicilio en comunidad de 40 familias de adultos mayores (jubilados).",
+      "portafolio_skus": {
+        "panes": 6,
+        "tortas": 5,
+        "encurtidos": 6,
+        "total": 17,
+        "insumos": "Ingredientes propios de huerta casera (cero kilómetros) — diferenciador de producto y argumento de salud"
+      },
+      "metricas": {
+        "clientes": 40,
+        "tipo_cliente": "Familias de adultos mayores — comunidad de jubilados",
+        "facturacion_mensual_cop": 10000000,
+        "facturacion_mensual_usd_aprox": 2600,
+        "rentable": true,
+        "canal_venta": "WhatsApp + entrega a domicilio (D2C)",
+        "frecuencia_produccion": "Diaria"
+      },
+      "logros": [
+        "Creé y posicioné la marca Enzalsarte desde cero: naming, identidad de producto, portafolio de 17 SKUs (6 panes, 5 tortas, 6 encurtidos) elaborados con ingredientes de huerta propia.",
+        "Construí base de 40 clientes fidelizados en comunidad de adultos mayores, con entregas a domicilio diarias operadas exclusivamente via WhatsApp — modelo D2C antes de que fuera tendencia post-COVID.",
+        "Generé facturación mensual de COP $10 millones (~USD 2,600) con negocio rentable orientado a salud y bienestar en zona rural alejada del casco urbano.",
+        "Gestioné cadena de suministro completa: huerta propia → producción artesanal diaria → distribución directa → servicio postventa vía WhatsApp.",
+        "Diseñé propuesta de valor diferenciada en contexto de pandemia: productos sin preservantes, ingredientes locales de huerta, entrega en puerta para comunidad de alto riesgo (adultos mayores)."
       ]
     },
     {
@@ -343,6 +374,18 @@
         "Implemented the first interactive voting system via WhatsApp for participatory budgets at the Alcaldia Mayor de Bogota: 103,785 votes in 60 days with real-time statistics.",
         "Implemented COMFENALCO EPS chatbot during COVID-19: reduced physical consultation load by 80 percent and handled more than 50,000 patients with remote pre-diagnosis.",
         "Improved client satisfaction by 20 percent through conversational flow optimization and personalized interaction strategies."
+      ]
+    },
+    "enzalsarte": {
+      "empresa": "Enzalsarte (marca propia)",
+      "periodo": "Marzo 2020 – Agosto 2021",
+      "_nota": "Emprendimiento propio durante pandemia COVID-19. Año sabático + negocio real rentable. Usar para Canal A (brand creation, entrepreneurship) y Canal B (product launch, D2C, community retail).",
+      "bullets": [
+        "Founded and built Enzalsarte from zero during the COVID-19 pandemic: created brand identity, developed a portfolio of 17 artisanal SKUs (6 bread varieties, 5 cakes, 6 pickled products) using zero-kilometer ingredients from a family garden.",
+        "Built and retained a base of 40 loyal client families in a senior retiree community, operating a daily D2C delivery model via WhatsApp — generating COP $10M/month (~USD 2,600) in revenue with a fully profitable operation.",
+        "Managed end-to-end supply chain: home garden sourcing → daily artisanal production → direct home delivery → WhatsApp-based customer service and order management.",
+        "Designed a health-focused value proposition for a high-vulnerability community (elderly adults) during the pandemic: preservative-free products, local ingredients, door-to-door delivery in a rural area with limited urban access.",
+        "Demonstrated entrepreneurial execution under constrained conditions: launched, operated, and sustained a profitable food brand independently for 17 months with zero external investment."
       ]
     },
     "mascotas": {

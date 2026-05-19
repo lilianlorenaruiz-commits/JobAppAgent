@@ -1,0 +1,347 @@
+LORENA RUIZ
+
+Bogotá D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884  |  www.linkedin.com/in/lilianlorenaruiz
+
+================================================================================
+PROFESSIONAL PROFILE
+================================================================================
+
+Marketing and paid media professional with 13+ years of experience across
+performance marketing, brand strategy, trade marketing, and digital channel
+management in Latin America, APAC, and Europe. Currently managing 300+ LinkedIn
+Ads accounts across Latin America (USD 240,000/month) at Teleperformance for
+LinkedIn Marketing Solutions. Previously Campaign Planner at Amazon Colombia
+(APAC programmatic DSP, May 2025 – Feb 2026), National Marketing Manager at
+Alcalisa S.A. Ecuador (USD 1.5M to USD 3.0M revenue growth in 4 years), and
+Marketing Manager at GRC S.A. Spain (export strategy for China and Russia).
+Expert in ROAS, tROAS, CPA, CPL, NTB Sales, and funnel-based reporting.
+Fully bilingual Spanish/English: C2 Proficient (EF SET certified, 73/100,
+October 2025). Weekly professional English use with APAC Global Account
+Executives in Singapore, Sydney, and Tokyo.
+
+================================================================================
+WORK EXPERIENCE
+================================================================================
+
+Paid Media Specialist / Account Manager, LinkedIn Ads
+Teleperformance (contract for LinkedIn Marketing Solutions)
+February 2026 – Present  |  Bogotá, Hybrid
+Market scope: Latin America ONLY
+
+- Manages and optimizes LinkedIn Ads campaigns for more than 300 B2B enterprise
+  accounts across Latin America with a monthly portfolio of USD 240,000,
+  executing Sponsored Content, Lead Gen Forms, and Website Conversion objectives.
+- ThinkOnward campaign (March 2026, Latin America): USD 200 investment generated
+  198,752 impressions, reaching 84,129 unique professionals in Earth Sciences and
+  Data Science. CPC USD 0.96, CPM USD 1.01, CTR 0.105 percent.
+- Delivers weekly campaign performance reviews and optimization recommendations
+  in English to LinkedIn Marketing Solutions account management.
+- Optimizes CPL, CPA, CPC, CTR, Average Frequency, Website Conversions, and
+  Lead Gen Form fills across 300+ B2B enterprise accounts in Latin America.
+- Executes Sponsored Content, Lead Gen Forms, Engagement, Website Visits, and
+  Website Conversions objectives for enterprise B2B clients across Latin America.
+
+────────────────────────────────────────────────────────────────────────────────
+
+Campaign Planner Contractor
+Amazon, Colombia
+May 2025 – Feb 2026  |  Bogotá
+Market scope: APAC ONLY — supports Global Account Executives in Singapore,
+Sydney, and Tokyo. No Latin America clients in this role.
+
+- Conducts weekly meetings in English with 4 Global Account Executives in APAC
+  (Singapore, Sydney, Tokyo) and delivers monthly reports on tROAS, NTB Sales,
+  and campaign optimizations for APAC premium brand accounts.
+- Narwal (November 20 to December 21, 2025, APAC): improved tROAS from 1.28x to
+  3.28x, generating USD 100,000 in attributed sales in 30 days through DSP
+  remarketing, video creative refresh, and impression frequency capping.
+- Modelones (Q3 2025, APAC): achieved number 1 position in the Nail Polish
+  category on Amazon for Q3 and Q4 2025 through Amazon ecosystem market
+  research (keywords, competitive landscape, category dynamics, trend analysis)
+  and DSP strategy, recovering category share.
+- TCL Electronics (2025, APAC): supported NFL 2025 brand strategy with
+  aggressive DSP display and contextual ad packages across the NFL season.
+  TCL reported 15.4 percent annual revenue growth (1,145.8B HKD) in a
+  declining home market category.
+- Designed funnel-based reporting format (awareness to consideration to
+  conversion) adopted as internal standard by all new Account Executives in
+  the CPC Team Colombia, reducing APAC team report review time by 30 percent.
+- Managed Amazon DSP programmatic campaigns for APAC premium brands including
+  Midea, Narwal, Bedsure, Jackery, Reolink, Momcozy, Govee, Modelones, and
+  TCL, supporting 4 Global Account Executives each managing 5 premium brand
+  accounts with annual sales targets of USD 3M per account.
+- Transformed results presentations into commercial narratives crossing
+  competitive data, share of voice, and market behavior, facilitating faster
+  budget optimization decisions with Global Account Executives in APAC.
+- Tracked key metrics including ROAS, tROAS, NTB Sales, Total Sales, DPVR,
+  Brand Search Rate, CTR, CPC, and ACOS for APAC premium brand accounts.
+- Managed campaigns with 30 to 60 ASINs per campaign: up to 60 for bulk
+  accounts (Midea, Bedsure); 20 to 30 for focused campaigns (Narwal, Jackery).
+- Executed three campaign objective types: conquista NTB via in-market audiences
+  and video in-stream; remarketing and loyalty via dynamic product ads;
+  lower-funnel video to push conversion using lookalike audiences when CPC
+  in search was high.
+- Used Amazon DSP and Amazon Marketing Cloud (AMC) for advanced attribution and
+  multicanal measurement across APAC premium brand accounts.
+
+────────────────────────────────────────────────────────────────────────────────
+
+Digital Channels and Customer Service Consultant
+Avanti IT SAS
+August 2021 – April 2025  |  Colombia
+
+- Led B2B consultative sales for high-value public sector clients including
+  COMFENALCO EPS, Alcaldia Mayor de Bogota, Alcaldia de Funza, Superfinanciera,
+  IDEAM, Unidad de Restitucion de Tierras, Rama Judicial, and Unisanitas,
+  aligning AI-powered digital solutions (chatbots, OCR, software integrations)
+  with business objectives and citizen experience improvement.
+- Managed Chatico chatbot for the Alcaldia Mayor de Bogota: 575,134 autonomous
+  conversations in 9 months, 95 percent resolved without human intervention,
+  5 percent escalated to human agents. Reduced call center congestion
+  significantly.
+- Implemented the first interactive voting system via WhatsApp for participatory
+  budgets at the Alcaldia Mayor de Bogota: 103,785 votes in 60 days with
+  real-time statistics.
+- Implemented COMFENALCO EPS chatbot during COVID-19: reduced physical
+  consultation load by 80 percent and handled more than 50,000 patients with
+  remote pre-diagnosis. Integrated chatbot with enterprise databases for
+  real-time access to exam results, invoices, and health certificates.
+- Improved client satisfaction by 20 percent through conversational flow
+  optimization, reduced response times, and personalized interaction strategies.
+- Alcaldia de Funza (Elikin chatbot): trained local staff to self-manage the
+  bot. Achieved 175 average conversations per day. Proposed transactional flow
+  implementation for fast-query resolution.
+- Delivered digital channel projects for Superfinanciera (chatbot integrated
+  with internal regulatory databases), IDEAM (AI chatbot for climate information
+  on web), Unidad de Restitucion de Tierras (Liferay 6.2 portal), Rama Judicial
+  (Liferay 6.1 to 7.1 migration), and Unisanitas (web portal Liferay).
+- Developed OCR module with AI for text recognition in documents and images.
+
+────────────────────────────────────────────────────────────────────────────────
+
+National Marketing Manager
+Alcalisa S.A.
+November 2013 – November 2018  |  Quito, Ecuador
+
+- Grew company revenue from USD 1.5M to USD 3.0M in 4 years leading brand
+  strategy, trade marketing, and digital channel migration.
+- Grew brand awareness from 18 percent to 34 percent (plus 16 percentage points)
+  by migrating full media investment from TV and radio to digital after
+  Ecuador's Ley de Comunicacion prohibited alcohol advertising on traditional
+  media.
+- Achieved 45 percent share of voice on social media in Ecuador's national
+  spirits segment, starting from zero in 2013.
+- Grew market share from 12 percent to 18 percent (plus 6 percentage points) in
+  Ecuador's national spirits segment in 4 years, reaching 2nd largest company
+  in the category.
+- Managed annual marketing budget of USD 350,000 to USD 450,000 (12 to 15
+  percent of revenue) with full P&L responsibility across brand, trade,
+  and digital channels.
+- Led 8 product launches and 6 integrated 360-degree campaigns across the
+  5-year tenure.
+- Carnaval 360 campaign (2016): 22 percent sales uplift in February and March
+  vs. prior year. Investment: USD 1,200 in Facebook Ads and USD 26,000 in field
+  activations across 4 provinces (Ambato, Guayaquil, Latacunga, and Quito).
+- Christmas 2015 activation (Supermaxi): USD 800 Facebook Ads investment
+  generated 18 percent sales uplift on Bellows whisky in December vs. prior
+  year.
+- Launched Secreto Inti premium liqueur into more than 20 HORECA venues in 2015
+  (Hotel Quito, Casa Gangotena, Plaza Grande), then secured codification into
+  Supermaxi in 2016. First time the chain accepted an on-trade validated niche
+  product.
+- Achieved 100 percent portfolio codification (6 to 8 SKUs: whisky x2, rum x2,
+  vodka x1, orange liqueur x1) across Supermaxi, Coral, Tia, and Santa Maria
+  by end of 2018, including Bellows and Secreto Inti.
+- Managed 12 direct reports and coordinated 3 external agencies: digital
+  (Facebook Ads and reporting), design and branding (packaging, POP, displays),
+  and activations and events (tastings, promoters, production).
+- Led 12 to 15 point-of-sale activations per year: tastings, displays,
+  nightclub activations, and national fair sampling across Ecuador.
+- Trained more than 150 people per year: regional distributors, bartenders,
+  and HORECA staff at 5-star hotels including Hotel Quito, Casa Gangotena,
+  and Plaza Grande.
+- Implemented Power BI sales reporting integrating retail chain and distributor
+  data from Supermaxi and Coral dashboards (sales by SKU, rotation, average
+  ticket), replacing manual Excel-based processes.
+- Monitored monthly shopper data and correlated Facebook Ads investment with
+  retail sales peaks to guide budget allocation decisions.
+- Presented results monthly to the CEO and quarterly to the Board of Directors.
+  Coordinated visits to Scottish malt suppliers in English for import logistics.
+
+────────────────────────────────────────────────────────────────────────────────
+
+Marketing Consultant
+Nexura International
+May 2013 – October 2013  |  Bogotá, Colombia
+
+- Designed communication plan to strengthen brand positioning and align
+  organizational culture with company goals.
+- Advised on marketing strategy implementation to improve internal brand
+  visibility.
+- Assessed campaign results and proposed actionable improvements.
+
+────────────────────────────────────────────────────────────────────────────────
+
+Marketing Manager
+GRC S.A.
+January 2012 – May 2013  |  Madrid, Spain
+
+- Exceeded export target by 50 percent: from 4 projected containers per year to
+  6 closed, generating approximately USD 108,000 in annual revenue.
+- Secured exclusive distribution agreements in Shanghai and Moscow for 2 of the
+  3 wine brands launched.
+- Reduced Google Ads CPC from USD 1.10 to USD 0.75 (32 percent reduction) in
+  4 months through negative keyword cleanup and time-zone-based scheduling
+  optimized for China and Russia time zones.
+- Achieved ROAS 4 to 1 on B2B Google Ads (target: 3 to 1) with a monthly
+  budget of USD 1,500.
+- Increased lead-to-commercial-contact conversion rate by 25 percent through
+  landing page optimization and site extensions.
+- Created and positioned 3 Spanish wine brands for export to China and Russia:
+  brand architecture, naming, packaging design, storytelling, and B2B
+  distributor strategy.
+- Grew exports to Asia by 7.5 percent in one year.
+- Analyzed emerging markets (China, Russia, Colombia) to identify growth
+  opportunities and consumer trends for export strategy.
+- Delivered commercial presentations in English to buyers in China and Russia,
+  negotiating exclusive distribution agreements.
+
+================================================================================
+EDUCATION
+================================================================================
+
+Diploma in AI and Community Management
+Aug 2023 – Nov 2023
+Universidad del Valle, Cali, Colombia
+
+Advanced Certificate in Retail and Trade Marketing
+2017
+EDES Business School, Retail Institute Spain and Latam, Quito, Ecuador
+
+Master's in Marketing and Commercial Management
+2011 – 2012
+Real Centro Universitario Maria Cristina, Escuela Europea, El Escorial, Spain
+
+Bachelor's in Social Communication and Journalism
+2005 – 2011
+Universidad del Valle, Cali, Colombia
+
+================================================================================
+SKILLS
+================================================================================
+
+PAID MEDIA Y PERFORMANCE MARKETING
+- LinkedIn Ads: Sponsored Content, Lead Gen Forms, Website Conversions,
+  Engagement (300+ cuentas B2B, portafolio USD 240,000/mes, Latin America)
+- Amazon DSP: programmatic campaign planning, audience segmentation, APAC
+  premium brands (Narwal, Modelones, TCL, Midea, Jackery, Bedsure, TCL)
+- Amazon Marketing Cloud (AMC): advanced attribution and multicanal measurement
+- Meta Ads (Facebook e Instagram): campaign setup, optimization, retail
+  activation (Alcalisa: USD 800 inversion → 18% sales uplift)
+- Google Ads: Search, Display, negative keyword cleanup, time-zone scheduling
+  (GRC S.A.: CPC USD 1.10 → USD 0.75 in 4 months, ROAS 4:1)
+- Programmatic advertising: DSP management, in-market audiences, lookalike
+  audiences, video in-stream, remarketing, frequency capping
+
+METRICAS Y OPTIMIZACION
+- Performance KPIs: ROAS, tROAS, CPA, CPL, CPC, CTR, CPM, NTB Sales, ACOS,
+  DPVR, Brand Search Rate, Total Sales, Average Frequency
+- Funnel-based analysis: awareness to consideration to conversion reporting
+  (adopted as internal standard at Amazon CPC Team Colombia)
+- Budget management: monthly portfolios from USD 1,500 (GRC) to USD 240,000
+  (LinkedIn/Teleperformance); annual budgets up to USD 450,000 (Alcalisa)
+
+ANALYTICS Y REPORTING
+- Tableau, Power BI, Google Analytics
+- Amazon DSP reporting, LinkedIn Campaign Manager, LinkedIn Insight Tag
+- Microsoft Excel (advanced: dashboards integrating retail chain data)
+
+BRAND STRATEGY Y MARKETING
+- Brand architecture, naming, packaging, go-to-market strategy
+- 360-degree campaigns: ATL/BTL/digital integration
+- P&L management, C-suite and board-level presentations
+- Market research: competitive landscape, share of voice, consumer insights
+
+TRADE MARKETING Y RETAIL
+- Category management, shopper marketing, retail activation
+- Distribution agreements, point-of-sale activation, HORECA channel
+- Retail chains: Supermaxi, Coral, Tia, Santa Maria (Ecuador)
+- Portfolio codification in major retail chains
+
+DIGITAL CHANNELS Y AI
+- Chatbot strategy and implementation (WhatsApp Business, web chatbots)
+- Conversational flow design and optimization
+- B2B consultative sales for AI-powered digital solutions
+- OCR module development and AI document processing
+- Liferay portal implementation (6.1, 6.2, 7.1)
+
+LIDERAZGO Y COORDINACION
+- Team management: up to 12 direct reports
+- Agency coordination: digital, design/branding, activations (3 agencies)
+- Distributor and HORECA training: 150+ people/year
+- International English-language work: weekly meetings with APAC teams;
+  commercial negotiations with buyers in China and Russia
+
+================================================================================
+LANGUAGES
+================================================================================
+
+Spanish: native
+English: C2 Proficient (EF SET certified, 73/100, October 2025)
+
+Professional English use:
+- Weekly meetings and monthly reports in English with 4 Global Account
+  Executives in APAC (Singapore, Sydney, Tokyo) — Amazon Campaign Planner role
+- Client advisory in English for LinkedIn Marketing Solutions — Teleperformance
+- Commercial presentations in English to buyers in China and Russia — GRC S.A.
+- Technical and import logistics coordination with Scottish malt suppliers
+  in English — Alcalisa S.A.
+
+================================================================================
+LOGROS CLAVE VERIFICADOS (referencia interna — no incluir en CV enviado)
+================================================================================
+
+DATOS EXACTOS CONFIRMADOS POR LA CANDIDATA:
+
+LinkedIn/Teleperformance (Latin America):
+  ThinkOnward (Mar 2026): USD 200 → 198,752 impresiones, 84,129 profesionales
+  únicos (Earth Sciences + Data Science), CPC USD 0.96, CPM USD 1.01, CTR 0.105%
+  Portafolio: 300+ cuentas, USD 240,000/mes
+
+Amazon Campaign Planner (APAC):
+  Narwal (Nov 20 – Dec 21, 2025): tROAS 1.28x → 3.28x, USD 100,000 ventas
+  atribuidas en 30 días (DSP remarketing + video creative refresh +
+  frequency capping)
+  Modelones Q3 2025: #1 en Nail Polish Amazon (APAC) Q3 y Q4 2025
+  TCL 2025: soporte NFL strategy, +15.4% ingresos anuales (1,145.8B HKD)
+  Reporte por funnel: adoptado como estándar por CPC Team Colombia, -30%
+  tiempo de revisión
+
+Avanti IT SAS:
+  Chatico (Alcaldía Mayor Bogotá): 575,134 conversaciones autónomas en 9
+  meses, 95% sin intervención humana
+  COMFENALCO EPS COVID-19: -80% carga física, 50,000+ pacientes con
+  pre-diagnóstico remoto
+  Votación WhatsApp: 103,785 votos en 60 días
+  Satisfacción cliente: +20%
+
+Alcalisa S.A. (Ecuador):
+  Revenue: USD 1.5M → USD 3.0M en 4 años (+100%)
+  Awareness: 18% → 34% (+16 p.p.)
+  Share of voice: 0% → 45% en segmento licores nacionales Ecuador
+  Market share: 12% → 18% (+6 p.p.), 2da empresa del rubro
+  Budget anual: USD 350,000–450,000 (12–15% del revenue)
+  Carnaval 360 (2016): +22% ventas Feb-Mar vs año anterior
+  Navidad 2015 Supermaxi: USD 800 → +18% ventas Bellows whisky diciembre
+  Equipo: 12 directos, 3 agencias, 150+ personas capacitadas/año
+
+GRC S.A. (Madrid):
+  Export target: 4 contenedores proyectados → 6 cerrados (+50%), ~USD 108K
+  Google Ads: CPC USD 1.10 → USD 0.75 (-32%) en 4 meses
+  ROAS: 4:1 (objetivo: 3:1), budget USD 1,500/mes
+  Conversión lead→contacto: +25%
+  Distribución exclusiva: Shanghai + Moscú para 2 de 3 marcas
+  Crecimiento exportaciones Asia: +7.5% en 1 año
+
+Inglés (certificado):
+  EF SET: 73/100, C2 Proficient, Octubre 2025

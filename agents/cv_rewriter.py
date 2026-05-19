@@ -304,6 +304,38 @@ def _load_bullets_por_rol() -> dict | None:
 _USD_RE = re.compile(r"\bUSD\s*[\d,]+(?:\.\d+)?(?:\s*[KkMm])?\b", re.IGNORECASE)
 
 
+def _extract_jd_usd_amounts(jd_text: str) -> list[str]:
+    """
+    Extrae montos USD del texto del JD para bloquearlos en el prompt.
+    Retorna lista deduplicada ordenada.
+    """
+    found = set(_USD_RE.findall(jd_text))
+    return sorted(found, key=lambda x: x.lower())
+
+
+def _build_forbidden_block(jd_text: str) -> str:
+    """
+    RC-6: Construye un bloque FORBIDDEN explícito para el prompt del rewriter.
+
+    Si el JD contiene montos USD (ej: "USD 200K+"), los inyecta como lista
+    prohibida al inicio del mensaje de usuario para que el LLM no los copie
+    al CV como si fueran logros de la candidata.
+
+    Retorna string vacío si el JD no contiene montos USD.
+    """
+    amounts = _extract_jd_usd_amounts(jd_text)
+    if not amounts:
+        return ""
+    amounts_str = ", ".join(amounts)
+    return (
+        f"⛔ RC-6 FORBIDDEN — JD USD AMOUNTS (DO NOT USE IN CV):\n"
+        f"The job description mentions these USD figures: {amounts_str}\n"
+        f"These are the EMPLOYER'S requirements or benchmarks — NOT the candidate's achievements.\n"
+        f"Including any of these in the CV is fabrication and strictly forbidden.\n"
+        f"Use ONLY amounts that appear verbatim in the candidate's KEY ACHIEVEMENTS below.\n\n"
+    )
+
+
 def _warn_orphan_claims(cv_text: str, bullets_por_rol: dict | None) -> list[str]:
     """
     Detecta montos USD en el CV generado que no aparecen en ningún bullet de bullets_por_rol.
@@ -547,7 +579,10 @@ def _rewrite_once(
     if auditor_feedback:
         audit_note = f"\n\nINDEPENDENT AUDITOR FEEDBACK (address ALL points):\n{auditor_feedback}"
 
+    forbidden_block = _build_forbidden_block(job.get("descripcion", ""))
+
     user = (
+        f"{forbidden_block}"
         f"JOB TITLE: {job.get('cargo', '')}\n"
         f"COMPANY: {job.get('empresa', '')}\n"
         f"MODALITY: {job.get('modalidad', '')} | LOCATION: {job.get('ubicacion', '')}\n\n"

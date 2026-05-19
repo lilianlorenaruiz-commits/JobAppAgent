@@ -383,3 +383,120 @@ class TestCVSectionStructure:
             assert employer in cv_text_grupo_red, (
                 f"Empleador '{employer}' no encontrado en el CV"
             )
+
+
+# ── RC-6: JD USD Amount Isolation ─────────────────────────────────────────────
+
+class TestRC6JdUsdIsolation:
+    """
+    RC-6 — Prevención de orphan claims inyectados desde el JD.
+
+    Problema: el LLM lee "USD 200K+" en el JD de OMD y lo escribe en el CV
+    como si fuera un logro de Lorena. _warn_orphan_claims lo detecta pero
+    no lo previene. La fix inyecta un bloque FORBIDDEN explícito al prompt.
+    """
+
+    def test_extract_jd_usd_finds_200k(self):
+        """Extrae 'USD 200K' del texto del JD."""
+        from agents.cv_rewriter import _extract_jd_usd_amounts
+        jd = "Gestión de presupuesto mensual USD 200K+. ROAS objetivo 4:1."
+        amounts = _extract_jd_usd_amounts(jd)
+        assert any("200" in a for a in amounts), (
+            f"'USD 200K' no encontrado en: {amounts}"
+        )
+
+    def test_extract_jd_usd_finds_multiple(self):
+        """Extrae múltiples montos USD del JD."""
+        from agents.cv_rewriter import _extract_jd_usd_amounts
+        jd = "Budget USD 150,000 mensual. Contratos de USD 2M anuales."
+        amounts = _extract_jd_usd_amounts(jd)
+        assert len(amounts) >= 2, f"Esperaba ≥2 montos, encontró: {amounts}"
+
+    def test_extract_jd_usd_empty_when_none(self):
+        """Retorna lista vacía si el JD no tiene montos USD."""
+        from agents.cv_rewriter import _extract_jd_usd_amounts
+        jd = "Buscamos profesional con experiencia en marketing digital."
+        amounts = _extract_jd_usd_amounts(jd)
+        assert amounts == [], f"Esperaba [], encontró: {amounts}"
+
+    def test_extract_jd_usd_deduplicates(self):
+        """No duplica el mismo monto si aparece dos veces."""
+        from agents.cv_rewriter import _extract_jd_usd_amounts
+        jd = "Presupuesto USD 200K. Objetivo: gestionar USD 200K mensual."
+        amounts = _extract_jd_usd_amounts(jd)
+        count_200k = sum(1 for a in amounts if "200" in a)
+        assert count_200k == 1, f"USD 200K aparece {count_200k} veces, esperaba 1"
+
+    def test_build_forbidden_block_contains_amount(self):
+        """El bloque FORBIDDEN incluye los montos extraídos del JD."""
+        from agents.cv_rewriter import _build_forbidden_block
+        jd = "Budget mensual USD 200K+."
+        block = _build_forbidden_block(jd)
+        assert "200" in block, f"Monto '200K' no encontrado en bloque: {block[:200]}"
+        assert "FORBIDDEN" in block.upper(), "Bloque no tiene etiqueta FORBIDDEN"
+
+    def test_build_forbidden_block_empty_when_no_usd(self):
+        """No genera bloque si el JD no tiene USD."""
+        from agents.cv_rewriter import _build_forbidden_block
+        jd = "Buscamos profesional con experiencia en marketing digital."
+        block = _build_forbidden_block(jd)
+        assert block == "", f"Esperaba string vacío, encontró: {block!r}"
+
+    def test_build_forbidden_block_mentions_fabrication(self):
+        """El bloque debe dejar claro que usar los montos es fabricación."""
+        from agents.cv_rewriter import _build_forbidden_block
+        jd = "Gestión de presupuesto USD 150,000."
+        block = _build_forbidden_block(jd)
+        assert any(w in block.lower() for w in ["fabricat", "forbidden", "prohibit", "not use"]), (
+            f"Bloque no advierte sobre fabricación: {block[:300]}"
+        )
+
+
+# ── Threshold Rama A y B ───────────────────────────────────────────────────────
+
+class TestThresholdProfiles:
+    """
+    Los perfiles A y B usan threshold_match = 82 (actualizado desde 85).
+
+    Justificación: con narrativas enriqueciendo el cv_text, JDs bien alineados
+    al perfil real de Lorena (Accenture, Grupo Éxito) puntúan consistentemente
+    83% — 2 puntos bajo el umbral original de 85%. El threshold de 82% refleja
+    el calibrado real post-narrativas sin dejar pasar roles con fit real < 80%.
+    """
+
+    def test_rama_a_threshold_is_82(self):
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_a_consultoria.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_match"] == 82, (
+            f"Rama A threshold esperado 82, encontrado {perfil['threshold_match']}"
+        )
+
+    def test_rama_b_threshold_is_82(self):
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_b_retail.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_match"] == 82, (
+            f"Rama B threshold esperado 82, encontrado {perfil['threshold_match']}"
+        )
+
+    def test_rama_c_threshold_unchanged_75(self):
+        """Rama C no cambia — ya estaba calibrado en 75."""
+        import json, os
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "profiles", "perfil_c_paidmedia.json"
+        )
+        with open(path, encoding="utf-8") as f:
+            perfil = json.load(f)
+        assert perfil["threshold_match"] == 75, (
+            f"Rama C threshold esperado 75, encontrado {perfil['threshold_match']}"
+        )

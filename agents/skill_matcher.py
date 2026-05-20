@@ -3,8 +3,8 @@ Skill Matcher — Agente 3
 Compara el CV de Lorena vs la descripción de un cargo y calcula un score 0-100.
 
 Lógica:
-  - 40 % keyword match (skills_target del perfil vs texto del CV + descripción del cargo)
-  - 60 % scoring semántico vía Claude (prompt caching: el CV se cachea entre llamadas)
+  - 20 % keyword match (skills_target del perfil vs texto del CV + descripción del cargo)
+  - 80 % scoring semántico vía Claude (prompt caching: el CV se cachea entre llamadas)
 
 Input:
     cv   : dict de cv_parser.parse_cv()
@@ -203,7 +203,7 @@ def analyze(cv: dict, job: dict, rama: str) -> dict:
     )
     sem_score, reason = _semantic_score(cv_text, job)
 
-    final = round(kw_score * 0.40 + sem_score * 0.60)
+    final = round(kw_score * 0.20 + sem_score * 0.80)
 
     return {
         "score":        final,

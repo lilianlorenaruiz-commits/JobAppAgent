@@ -1,7 +1,8 @@
 """
-Smoke test Nivel 3 — Canal A real con pipeline completo.
+Smoke test Nivel 3 — Canal A real con pipeline completo (Rama A — Consultoría).
 
 Flujo:
+  0. Skill Matching — CV vs JD, threshold 82%
   1. Extraer cargo, empresa y descripción de la URL de LinkedIn (Playwright breve)
   2. Reescribir CV adaptado a ese cargo (Claude API — puede tardar 2-4 min)
   3. Generar PDF del CV reescrito
@@ -21,11 +22,12 @@ from agents.cv_parser import parse_cv
 from agents.cv_rewriter import rewrite
 from agents.pdf_generator import generate
 from agents.applicator import apply, _extract_linkedin_job_info
+from agents.skill_matcher import analyze as skill_match
 
 # ── URL de prueba — puede sobreescribirse con argumento CLI ─────────────────
-_DEFAULT_URL = "https://www.linkedin.com/jobs/view/4407519233/"
+_DEFAULT_URL = "https://co.linkedin.com/jobs/view/digital-marketing-account-manager-fully-remote-at-valatam-4413843121"
 TEST_URL  = sys.argv[1] if len(sys.argv) > 1 else _DEFAULT_URL
-TEST_RAMA = "C"   # A=Consultoría  B=Retail  C=Paid Media
+TEST_RAMA = "A"   # A=Consultoría  B=Retail  C=Paid Media
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -88,13 +90,8 @@ def main():
     print(f"HITL:   {'ACTIVADO (' + str(config.HITL_TIMEOUT_S // 60) + ' min)' if config.HITL_ENABLED else 'DESACTIVADO'}")
     print()
 
-    # ── 1. Extraer info del cargo ─────────────────────────────────────────────
-    print("PASO 1 — Extrayendo info del cargo desde LinkedIn...")
-    job = _scrape_job_from_url(TEST_URL)
-    print()
-
-    # ── 2. Leer CV base ───────────────────────────────────────────────────────
-    print("PASO 2 — Leyendo CV base desde PDF...")
+    # ── 0. Leer CV base ───────────────────────────────────────────────────────
+    print("PASO 0 — Leyendo CV base desde PDF...")
     try:
         cv = parse_cv()
         print(f"  CV listo: {cv['nombre']} | {len(cv['experiencia'])} roles")
@@ -103,8 +100,35 @@ def main():
         sys.exit(1)
     print()
 
-    # ── 3. Reescribir CV adaptado al cargo ────────────────────────────────────
-    print(f"PASO 3 — Reescribiendo CV para '{job['cargo']}' @ '{job['empresa']}'...")
+    # ── 1. Extraer info del cargo ─────────────────────────────────────────────
+    print("PASO 1 — Extrayendo info del cargo desde LinkedIn...")
+    job = _scrape_job_from_url(TEST_URL)
+    job["rama"] = TEST_RAMA
+    print()
+
+    # ── 1b. Skill matching ────────────────────────────────────────────────────
+    print("PASO 1b — Skill Matching (Rama A threshold 82%)...")
+    try:
+        match_result = skill_match(cv, job, rama=TEST_RAMA)
+        score = match_result["score"]
+        threshold = match_result["threshold"]
+        passed = match_result["passed"]
+        print(f"  Score: {score}% | Threshold: {threshold}% | Passed: {passed}")
+        print(f"  Skills match: {len(match_result['skills_match'])} | Gap: {len(match_result['skills_gap'])}")
+        print(f"  Razón: {match_result['reason']}")
+        if not passed:
+            print(f"\n  [DESCARTADO] score {score}% < {threshold}% umbral Rama A")
+            print("  Reemplaza la URL o ajusta el cargo objetivo.")
+            sys.exit(0)
+        print(f"  [OK] PASA skill matching — continuando con CV rewriting")
+        job["score"] = score
+    except Exception as e:
+        print(f"  ERROR skill_matcher: {e} — continuando con score manual 90%")
+        job["score"] = 90
+    print()
+
+    # ── 2. Reescribir CV adaptado al cargo ────────────────────────────────────
+    print(f"PASO 2 — Reescribiendo CV para '{job['cargo']}' @ '{job['empresa']}'...")
     print("  (Claude API — puede tardar 2-4 minutos)")
     try:
         rewrite_result = rewrite(cv, job, rama=TEST_RAMA)
@@ -119,8 +143,8 @@ def main():
     cv_text = rewrite_result["cv_text"]
     print()
 
-    # ── 4. Generar PDF ────────────────────────────────────────────────────────
-    print("PASO 4 — Generando PDF...")
+    # ── 3. Generar PDF ────────────────────────────────────────────────────────
+    print("PASO 3 — Generando PDF...")
     try:
         pdf_path = generate(cv_text, job)
         print(f"  PDF generado: {os.path.basename(pdf_path)}")
@@ -129,8 +153,8 @@ def main():
         sys.exit(1)
     print()
 
-    # ── 5. Aplicar — Easy Apply ───────────────────────────────────────────────
-    print("PASO 5 — Aplicando via Canal A (Easy Apply)...")
+    # ── 4. Aplicar — Easy Apply ───────────────────────────────────────────────
+    print("PASO 4 — Aplicando via Canal A (Easy Apply)...")
     print("  Browser abriendo LinkedIn...")
     if config.HITL_ENABLED:
         print(f"  Telegram recibirá screenshot para aprobación ({config.HITL_TIMEOUT_S // 60} min timeout)")

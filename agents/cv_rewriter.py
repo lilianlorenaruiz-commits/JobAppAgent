@@ -755,8 +755,9 @@ def rewrite(
                     result = _rewrite_once(cv_enriched, job, None,
                                            evidence_map=built_map,
                                            auditor_feedback=auditor_feedback)
-                    result["attempts"] = 1
-                    result["passed_ats"] = result["ats_score"] >= _ats_threshold
+                    result["attempts"]      = 1
+                    result["passed_ats"]    = result["ats_score"] >= _ats_threshold
+                    result["ats_threshold"] = _ats_threshold
                     result["poor_fit"] = True
                     result["poor_fit_reason"] = (
                         f"{tier3_count} skills del JD sin evidencia en narrativas"
@@ -802,9 +803,10 @@ def rewrite(
         prev     = score
         cv_plain = result["cv_text"]
 
-    result["attempts"]    = attempt
-    result["passed_ats"]  = result["ats_score"] >= _ats_threshold
-    result["poor_fit"]    = False
+    result["attempts"]       = attempt
+    result["passed_ats"]     = result["ats_score"] >= _ats_threshold
+    result["ats_threshold"]  = _ats_threshold
+    result["poor_fit"]       = False
     result["poor_fit_reason"] = ""
     return result
 

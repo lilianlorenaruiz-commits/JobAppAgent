@@ -10,7 +10,8 @@ Flujo:
 
 Uso:
   python _smoke_canal_a.py                                     # URL por defecto
-  python _smoke_canal_a.py https://www.linkedin.com/jobs/view/XXXXXXX
+  python _smoke_canal_a.py <URL>                               # job específico
+  python _smoke_canal_a.py <URL> --bypass-skill-match          # salta gate de score (solo para test de flujo)
 """
 import os
 import sys
@@ -24,10 +25,14 @@ from agents.pdf_generator import generate
 from agents.applicator import apply, _extract_linkedin_job_info
 from agents.skill_matcher import analyze as skill_match
 
-# ── URL de prueba — puede sobreescribirse con argumento CLI ─────────────────
+# ── CLI args ─────────────────────────────────────────────────────────────────
 _DEFAULT_URL = "https://co.linkedin.com/jobs/view/digital-marketing-account-manager-fully-remote-at-valatam-4413843121"
-TEST_URL  = sys.argv[1] if len(sys.argv) > 1 else _DEFAULT_URL
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+_flags = [a for a in sys.argv[1:] if a.startswith("--")]
+
+TEST_URL  = _args[0] if _args else _DEFAULT_URL
 TEST_RAMA = "A"   # A=Consultoría  B=Retail  C=Paid Media
+BYPASS_SKILL_MATCH = "--bypass-skill-match" in _flags  # solo para validar flujo
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -107,20 +112,26 @@ def main():
     print()
 
     # ── 1b. Skill matching ────────────────────────────────────────────────────
-    print("PASO 1b — Skill Matching (Rama A threshold 82%)...")
+    print(f"PASO 1b — Skill Matching (Rama A threshold 82%)"
+          + (" [BYPASS ACTIVADO — solo test de flujo]" if BYPASS_SKILL_MATCH else "") + "...")
     try:
         match_result = skill_match(cv, job, rama=TEST_RAMA)
         score = match_result["score"]
         threshold = match_result["threshold"]
         passed = match_result["passed"]
         print(f"  Score: {score}% | Threshold: {threshold}% | Passed: {passed}")
-        print(f"  Skills match: {len(match_result['skills_match'])} | Gap: {len(match_result['skills_gap'])}")
-        print(f"  Razón: {match_result['reason']}")
+        print(f"  Skills match ({len(match_result['skills_match'])}): {match_result['skills_match']}")
+        print(f"  Skills gap  ({len(match_result['skills_gap'])}):   {match_result['skills_gap']}")
+        print(f"  Razon: {match_result['reason']}")
         if not passed:
-            print(f"\n  [DESCARTADO] score {score}% < {threshold}% umbral Rama A")
-            print("  Reemplaza la URL o ajusta el cargo objetivo.")
-            sys.exit(0)
-        print(f"  [OK] PASA skill matching — continuando con CV rewriting")
+            if BYPASS_SKILL_MATCH:
+                print(f"  [BYPASS] score {score}% < {threshold}% — continuando igualmente (modo test de flujo)")
+            else:
+                print(f"\n  [DESCARTADO] score {score}% < {threshold}% umbral Rama A")
+                print("  Reemplaza la URL o usa --bypass-skill-match para test de flujo.")
+                sys.exit(0)
+        else:
+            print(f"  [OK] PASA skill matching — continuando con CV rewriting")
         job["score"] = score
     except Exception as e:
         print(f"  ERROR skill_matcher: {e} — continuando con score manual 90%")
@@ -136,7 +147,8 @@ def main():
               f"Intentos: {rewrite_result['attempts']} | "
               f"Pasa: {rewrite_result['passed_ats']}")
         if not rewrite_result["passed_ats"]:
-            print("  ADVERTENCIA: ATS < 95% — CV puede no estar optimizado")
+            ats_thresh = rewrite_result.get("ats_threshold", "?")
+            print(f"  ADVERTENCIA: ATS {rewrite_result['ats_score']}% < {ats_thresh}% — CV puede no estar optimizado")
     except Exception as e:
         print(f"  ERROR cv_rewriter: {e}")
         sys.exit(1)

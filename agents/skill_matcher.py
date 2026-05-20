@@ -95,16 +95,30 @@ def _cv_to_text(cv: dict, narrativas: dict | None = None) -> str:
 def _keyword_score(
     cv_text: str,
     job_desc: str,
-    skills_target: list[str],
+    skills_target: list,
 ) -> tuple[float, list[str], list[str]]:
-    """Keyword match de skills_target contra CV + descripción del cargo."""
+    """Keyword match con soporte de aliases.
+
+    skills_target puede contener:
+    - strings simples: "Brand Strategy"  (backward compatible)
+    - dicts: {"skill": "C1 English", "aliases": ["c1/c2", "inglés c1"]}
+
+    El campo "skill" es el nombre canónico que aparece en matched/gaps.
+    Los aliases siempre se buscan en minúsculas (haystack ya está en lower).
+    """
     haystack = (cv_text + " " + job_desc).lower()
     matched, gaps = [], []
-    for skill in skills_target:
-        if skill.lower() in haystack:
-            matched.append(skill)
+    for entry in skills_target:
+        if isinstance(entry, dict):
+            skill_name = entry["skill"]
+            terms = [skill_name.lower()] + [a.lower() for a in entry.get("aliases", [])]
         else:
-            gaps.append(skill)
+            skill_name = entry
+            terms = [entry.lower()]
+        if any(t in haystack for t in terms):
+            matched.append(skill_name)
+        else:
+            gaps.append(skill_name)
     score = (len(matched) / len(skills_target) * 100) if skills_target else 0.0
     return score, matched, gaps
 

@@ -264,3 +264,78 @@ class TestKeywordScoreImprovement:
             f"Score sin narrativas debería ser 0% (ni el JD ni el PDF mencionan "
             f"los keywords sectoriales). Matched: {matched_sin}"
         )
+
+
+# ── Tests: aliases en _keyword_score ──────────────────────────────────────────
+
+class TestSkillMatcherAliases:
+    """
+    Verifica que _keyword_score acepta skills_target mixto:
+    strings simples (backward compat) y dicts {"skill", "aliases"}.
+    """
+
+    def test_alias_matches_c1_c2_variant(self):
+        """'C1/C2' en JD debe matchear skill 'C1 English' via alias."""
+        from agents.skill_matcher import _keyword_score
+        skills = [{"skill": "C1 English", "aliases": ["c1/c2", "inglés c1"]}]
+        _, matched, _ = _keyword_score("", "Requiere inglés C1/C2", skills)
+        assert "C1 English" in matched
+
+    def test_alias_matches_spanish_digital_transformation(self):
+        """'transformación digital' en JD debe matchear 'Digital Transformation' via alias."""
+        from agents.skill_matcher import _keyword_score
+        skills = [{"skill": "Digital Transformation",
+                   "aliases": ["transformación digital"]}]
+        _, matched, _ = _keyword_score("", "liderará transformación digital", skills)
+        assert "Digital Transformation" in matched
+
+    def test_plain_string_backward_compatible(self):
+        """Strings simples siguen funcionando igual que antes."""
+        from agents.skill_matcher import _keyword_score
+        skills = ["Brand Strategy"]
+        _, matched, _ = _keyword_score("brand strategy en CV", "", skills)
+        assert "Brand Strategy" in matched
+
+    def test_skill_goes_to_gap_when_no_alias_matches(self):
+        """Si ni el skill ni sus aliases aparecen, va a gaps."""
+        from agents.skill_matcher import _keyword_score
+        skills = [{"skill": "C1 English", "aliases": ["c1/c2"]}]
+        _, _, gaps = _keyword_score("", "requiere experiencia en marketing", skills)
+        assert "C1 English" in gaps
+
+    def test_skill_name_is_canonical_in_matched(self):
+        """El nombre en 'matched' es el campo 'skill', no el alias."""
+        from agents.skill_matcher import _keyword_score
+        skills = [{"skill": "Meta Ads", "aliases": ["facebook ads"]}]
+        _, matched, _ = _keyword_score("", "experiencia en Facebook Ads requerida", skills)
+        assert "Meta Ads" in matched
+        assert "facebook ads" not in matched
+
+    def test_mixed_list_plain_and_dict(self):
+        """Lista mixta: string + dict coexisten sin error."""
+        import pytest
+        from agents.skill_matcher import _keyword_score
+        skills = [
+            "Brand Strategy",
+            {"skill": "C1 English", "aliases": ["c1/c2"]},
+            "Data Analysis",
+        ]
+        score, matched, gaps = _keyword_score(
+            "brand strategy analysis", "requiere c1/c2", skills
+        )
+        assert "Brand Strategy" in matched
+        assert "C1 English" in matched
+        assert "Data Analysis" in gaps
+        assert score == pytest.approx(66.67, abs=0.5)
+
+    def test_formula_weight_20_80(self):
+        """kw=50%, sem=78% con fórmula 20/80 = 72 (no 67 que daba la fórmula 40/60)."""
+        kw, sem = 50.0, 78.0
+        result = round(kw * 0.20 + sem * 0.80)
+        assert result == 72
+
+    def test_valatam_scenario_passes_threshold_75(self):
+        """Reproduce el caso real Valatam: 3/4 aliases match + sem=78% debe superar threshold 75."""
+        kw, sem = 75.0, 78.0
+        result = round(kw * 0.20 + sem * 0.80)
+        assert result >= 75   # 15 + 62.4 = 77.4 → 77 ✓

@@ -574,3 +574,100 @@ class TestThresholdAtsProfiles:
         assert _load_ats_threshold("C") == 95, (
             f"_load_ats_threshold('C') esperado 95, encontrado {_load_ats_threshold('C')}"
         )
+
+
+# ── _fix_static_fields: month dedup + LinkedIn title lock ─────────────────────
+
+class TestFixStaticFieldsDateAndTitle:
+    """
+    Dos bugs detectados en CVs generados:
+    1. "May May 2025 – Feb 2026" — el LLM duplica el nombre del mes.
+    2. Título del rol LinkedIn/Teleperformance se reescribe libremente.
+
+    _fix_static_fields debe corregir ambos como post-processing determinístico.
+    """
+
+    # ── Bug 1: month duplication ───────────────────────────────────────────────
+
+    def test_may_may_deduped_to_may(self):
+        """'May May 2025 – Feb 2026' debe quedar 'May 2025 – Feb 2026'."""
+        from agents.cv_rewriter import _fix_static_fields
+        cv = (
+            "LORENA RUIZ\n"
+            "Bogotá D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884\n"
+            "WORK EXPERIENCE\n"
+            "Campaign Planner Contractor\n"
+            "Amazon, Colombia\n"
+            "May May 2025 – Feb 2026\n"
+            "• Some bullet\n"
+        )
+        result = _fix_static_fields(cv)
+        assert "May May" not in result, (
+            f"'May May' no fue corregido:\n{result[:400]}"
+        )
+        assert "May 2025" in result, (
+            f"'May 2025' no encontrado tras dedup:\n{result[:400]}"
+        )
+
+    def test_month_dedup_generic_february(self):
+        """'February February 2026' → 'February 2026'."""
+        from agents.cv_rewriter import _fix_static_fields
+        cv = (
+            "LORENA RUIZ\n"
+            "Bogotá D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884\n"
+            "WORK EXPERIENCE\n"
+            "Some Role\n"
+            "Some Company\n"
+            "February February 2026 – Present\n"
+        )
+        result = _fix_static_fields(cv)
+        assert "February February" not in result, (
+            f"'February February' no fue corregido:\n{result[:400]}"
+        )
+
+    # ── Bug 2: LinkedIn title enforcement ─────────────────────────────────────
+
+    def _linkedin_block(self, wrong_title: str) -> str:
+        """Builds a cv_text snippet where the LinkedIn role has a wrong title."""
+        return (
+            "LORENA RUIZ\n"
+            "Bogotá D.C.  |  lilian@lorena-ruiz.com  |  +57 315 256 1884\n"
+            "WORK EXPERIENCE\n"
+            f"{wrong_title}\n"
+            "Teleperformance (contract for LinkedIn Marketing Solutions)\n"
+            "February 2026 – Present  |  Bogotá, Hybrid\n"
+            "• Manage and optimize LinkedIn Ads campaigns.\n"
+        )
+
+    def test_linkedin_title_enforced_when_simplified(self):
+        """LLM escribe título simplificado → debe reemplazarse por el canónico."""
+        from agents.cv_rewriter import _fix_static_fields, _LINKEDIN_TITLE
+        cv = self._linkedin_block("LinkedIn Account Manager")
+        result = _fix_static_fields(cv)
+        assert _LINKEDIN_TITLE in result, (
+            f"Título canónico no encontrado:\nEsperado: {_LINKEDIN_TITLE}\nObtenido:\n{result[:600]}"
+        )
+
+    def test_linkedin_title_enforced_when_altered(self):
+        """LLM usa título diferente → debe reemplazarse por el canónico."""
+        from agents.cv_rewriter import _fix_static_fields, _LINKEDIN_TITLE
+        cv = self._linkedin_block("Paid Media Specialist, LinkedIn Marketing Solutions")
+        result = _fix_static_fields(cv)
+        assert _LINKEDIN_TITLE in result, (
+            f"Título canónico no encontrado:\nEsperado: {_LINKEDIN_TITLE}\nObtenido:\n{result[:600]}"
+        )
+
+    def test_linkedin_title_not_changed_when_already_correct(self):
+        """Si el título ya es canónico, _fix_static_fields no lo altera."""
+        from agents.cv_rewriter import _fix_static_fields, _LINKEDIN_TITLE
+        cv = self._linkedin_block(_LINKEDIN_TITLE)
+        result = _fix_static_fields(cv)
+        assert _LINKEDIN_TITLE in result, (
+            f"Título canónico eliminado o alterado:\n{result[:600]}"
+        )
+
+    def test_linkedin_title_export_exists(self):
+        """_LINKEDIN_TITLE debe estar definido y exportado en cv_rewriter."""
+        from agents.cv_rewriter import _LINKEDIN_TITLE
+        assert "Paid Media Specialist" in _LINKEDIN_TITLE
+        assert "LinkedIn Ads" in _LINKEDIN_TITLE

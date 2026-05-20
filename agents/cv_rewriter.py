@@ -108,6 +108,13 @@ _EDUCATION_DATES: dict[str, str] = {
 # Ground-truth date for the Amazon role (ended Feb 2026 when LinkedIn role started).
 _AMAZON_DATE = "May 2025 – Feb 2026"
 
+# Canonical title for the LinkedIn / Teleperformance role (Feb 2026 – Present).
+# The LLM may simplify or alter this — _fix_static_fields enforces it post-generation.
+_LINKEDIN_TITLE = (
+    "Paid Media Specialist / Account Manager, LinkedIn Ads"
+    " (via Teleperformance for LinkedIn Marketing Solutions)"
+)
+
 # Canonical education block — injected after LLM output so it cannot be modified.
 # Format per entry: title / date / institution  (3 lines, no bullets — PDF generator
 # renders the first line of each group as bold automatically).
@@ -149,17 +156,44 @@ def _fix_static_fields(cv_text: str) -> str:
     )
     cv_text = head_fixed + tail
 
-    # 2. Enforce Amazon role date — always override whatever the LLM wrote.
+    # 2a. Month-name deduplication — LLM sometimes doubles the month in date strings
+    #     (e.g., "May May 2025 – Feb 2026" → "May 2025 – Feb 2026").
+    #     Must run BEFORE the Amazon date regex so the month fix happens first.
+    _MONTH_PAT = (
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?"
+        r"|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    )
+    cv_text = re.sub(
+        rf"(?i)\b({_MONTH_PAT})\s+\1\b",
+        r"\1",
+        cv_text,
+    )
+    # 2b. Enforce Amazon role date — always override whatever the LLM wrote.
     #    Primary:  "May 2025 – <anything>" — forma canónica y "May 2025 – Present".
     #    Fallback: "2025 – Present" o "2025 – Feb(ruary) 2026" — LLM omitió "May".
+    #    NOTE: The lookbehind (?<!May ) prevents the fallback from re-matching the date
+    #    that the primary regex already fixed (which now starts "May 2025 –"), avoiding
+    #    a double-replacement bug that produces "May May 2025 – Feb 2026".
     cv_text = re.sub(
         r"May\s+2025\s*[–\-]\s*[^\n]+",
         _AMAZON_DATE,
         cv_text,
     )
     cv_text = re.sub(
-        r"\b2025\s*[–\-]\s*(?:Present|Feb(?:ruary)?\s+2026)\b[^\n]*",
+        r"(?<!May )\b2025\s*[–\-]\s*(?:Present|Feb(?:ruary)?\s+2026)\b[^\n]*",
         _AMAZON_DATE,
+        cv_text,
+    )
+
+    # 2c. Enforce LinkedIn/Teleperformance role title.
+    #     The LLM may simplify (e.g., "LinkedIn Account Manager") or alter the title.
+    #     Anchor: the Teleperformance company line + "February 2026" date line immediately follow.
+    #     Pattern: [wrong_title]\n[Teleperformance line]\n[February 2026 – Present...]
+    cv_text = re.sub(
+        r"(?m)^[^\n]+\n"
+        r"((?:[^\n]*Teleperformance[^\n]*|[^\n]*LinkedIn Marketing Solutions[^\n]*))\n"
+        r"(February 2026\s*[–\-]\s*Present[^\n]*)",
+        _LINKEDIN_TITLE + r"\n\1\n\2",
         cv_text,
     )
 

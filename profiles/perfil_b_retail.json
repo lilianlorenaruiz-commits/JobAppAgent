@@ -13,11 +13,23 @@
   "dias_publicacion_max": 16,
   "idioma_requerido": "Inglés C1",
   "skills_target": [
-    "Trade Marketing",
-    "Category Management",
-    "Shopper Insights",
-    "P&L"
+    {
+      "skill": "Trade Marketing",
+      "aliases": ["trade mktg", "trade & marketing"]
+    },
+    {
+      "skill": "Category Management",
+      "aliases": ["category manager", "gestión de categorías", "category mgmt"]
+    },
+    {
+      "skill": "Shopper Insights",
+      "aliases": ["shopper marketing", "shopper analytics", "consumer insights"]
+    },
+    {
+      "skill": "P&L",
+      "aliases": ["p&l management", "profit and loss", "pérdidas y ganancias"]
+    }
   ],
-  "threshold_match": 82,
+  "threshold_match": 75,
   "threshold_ats": 92
 }

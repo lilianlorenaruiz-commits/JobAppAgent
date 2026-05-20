@@ -14,10 +14,17 @@
   "idioma_requerido": "Inglés C1",
   "skills_target": [
     "Brand Strategy",
-    "Digital Transformation",
+    {
+      "skill": "Digital Transformation",
+      "aliases": ["transformación digital", "digital transformation"]
+    },
     "Data Analysis",
-    "C1 English"
+    {
+      "skill": "C1 English",
+      "aliases": ["c1/c2", "inglés c1", "english c1", "advanced english",
+                  "nivel c1", "fluent english", "bilingual"]
+    }
   ],
-  "threshold_match": 82,
+  "threshold_match": 75,
   "threshold_ats": 92
 }

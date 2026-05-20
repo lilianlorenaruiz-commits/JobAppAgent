@@ -456,15 +456,15 @@ class TestRC6JdUsdIsolation:
 
 class TestThresholdProfiles:
     """
-    Los perfiles A y B usan threshold_match = 82 (actualizado desde 85).
+    Los perfiles A y B usan threshold_match = 75 (calibrado mercado colombiano real).
 
-    Justificación: con narrativas enriqueciendo el cv_text, JDs bien alineados
-    al perfil real de Lorena (Accenture, Grupo Éxito) puntúan consistentemente
-    83% — 2 puntos bajo el umbral original de 85%. El threshold de 82% refleja
-    el calibrado real post-narrativas sin dejar pasar roles con fit real < 80%.
+    Justificación: el threshold de 82% fue calibrado contra mocks sintéticos con
+    keywords exactas. El corpus real de JDs colombianos usa variantes tipográficas
+    ("C1/C2", "transformación digital") que el scorer literal no detecta. Con aliases
+    + fórmula 20/80 (semantic-primary), el threshold efectivo de calidad es 75%.
     """
 
-    def test_rama_a_threshold_is_82(self):
+    def test_rama_a_threshold_is_75(self):
         import json, os
         path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
@@ -472,11 +472,11 @@ class TestThresholdProfiles:
         )
         with open(path, encoding="utf-8") as f:
             perfil = json.load(f)
-        assert perfil["threshold_match"] == 82, (
-            f"Rama A threshold esperado 82, encontrado {perfil['threshold_match']}"
+        assert perfil["threshold_match"] == 75, (
+            f"Rama A threshold esperado 75, encontrado {perfil['threshold_match']}"
         )
 
-    def test_rama_b_threshold_is_82(self):
+    def test_rama_b_threshold_is_75(self):
         import json, os
         path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
@@ -484,8 +484,8 @@ class TestThresholdProfiles:
         )
         with open(path, encoding="utf-8") as f:
             perfil = json.load(f)
-        assert perfil["threshold_match"] == 82, (
-            f"Rama B threshold esperado 82, encontrado {perfil['threshold_match']}"
+        assert perfil["threshold_match"] == 75, (
+            f"Rama B threshold esperado 75, encontrado {perfil['threshold_match']}"
         )
 
     def test_rama_c_threshold_unchanged_75(self):

@@ -13,10 +13,22 @@
   "dias_publicacion_max": 16,
   "idioma_requerido": "Inglés C1",
   "skills_target": [
-    "Google Ads",
-    "Meta Ads",
-    "Amazon Ads",
-    "LinkedIn Ads",
+    {
+      "skill": "Google Ads",
+      "aliases": ["google adwords", "sem", "search ads", "google advertising"]
+    },
+    {
+      "skill": "Meta Ads",
+      "aliases": ["facebook ads", "instagram ads", "meta advertising", "facebook advertising"]
+    },
+    {
+      "skill": "Amazon Ads",
+      "aliases": ["amazon advertising", "amazon dsp", "amazon ppc", "sponsored products"]
+    },
+    {
+      "skill": "LinkedIn Ads",
+      "aliases": ["linkedin advertising", "linkedin campaigns"]
+    },
     "Programmatic"
   ],
   "threshold_match": 75,
